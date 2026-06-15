@@ -86,7 +86,7 @@ h2.section-title{font-family:var(--font-display);font-size:24px;letter-spacing:-
     </a>
     <div class="header-search" role="search">
       <form action="/" method="get">
-        <input type="search" name="q" placeholder="Search {{ total|format_thousands }} {{ brand }} products..." autocomplete="off">
+        <input type="search" name="q" placeholder="Search {{ total|format_thousands }} {{ brand }} products…" autocomplete="off">
         <button type="submit" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
       </form>
     </div>
@@ -125,7 +125,7 @@ h2.section-title{font-family:var(--font-display);font-size:24px;letter-spacing:-
     {% for p in products %}
     <a href="{{ p.url }}" class="product-card" style="text-decoration:none;color:inherit">
       <div class="card-img">
-        <img src="{{ p.image_url_1 }}" alt="{{ p.product_name }}" width="220" height="220" loading="lazy" onerror="this.style.display='none'">
+        <img src="{{ p.image_url_1 or '/api/catimg/' + (p.category|slugify) + '/0' }}" alt="{{ p.product_name }}" width="220" height="220" loading="lazy" onerror="this.onerror=null;this.src='/api/catimg/{{ p.category|slugify }}/0'">
         <span class="card-badge {% if p.availability == 'In Stock' %}badge-stock{% elif 'Limited' in p.availability %}badge-low{% else %}badge-out{% endif %}">
           {% if p.availability == 'In Stock' %}In Stock{% elif 'Limited' in p.availability %}Limited{% else %}Backorder{% endif %}
         </span>
@@ -154,6 +154,7 @@ h2.section-title{font-family:var(--font-display);font-size:24px;letter-spacing:-
     </div>
   </div>
 </div>
+
 <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
 </body>
 </html>
