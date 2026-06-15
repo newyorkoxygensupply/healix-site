@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+<meta name="description" content="{{ description }}">
+<link rel="canonical" href="{{ canonical }}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ description }}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:site_name" content="{{ site_name }}">
+<meta property="og:image" content="{{ og_image }}">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:locale" content="en_US">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ description }}">
+<meta name="twitter:image" content="{{ og_image }}">
+<link rel="icon" type="image/svg+xml" href="/static/img/favicon.svg">
+<link rel="icon" type="image/png" href="/static/img/favicon.png" sizes="32x32">
+<link rel="apple-touch-icon" href="/static/img/apple-touch-icon.png">
+<link rel="manifest" href="/static/manifest.json">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": ["Organization","MedicalOrganization"],
+      "@id": "{{ site_url }}/#organization",
+      "name": "{{ site_name }}",
+      "url": "{{ site_url }}",
+      "logo": {"@type":"ImageObject","url":"{{ site_url }}/static/img/logo.png","width":200,"height":60},
+      "description": "{{ description }}",
+      "contactPoint": {"@type":"ContactPoint","contactType":"customer support","availableLanguage":"English"},
+      "sameAs": ["{{ site_url }}"]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "{{ site_url }}/#website",
+      "url": "{{ site_url }}",
+      "name": "{{ site_name }} — Medical Supplies",
+      "description": "{{ description }}",
+      "publisher": {"@id":"{{ site_url }}/#organization"},
+      "inLanguage": "en-US",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": {"@type":"EntryPoint","urlTemplate":"{{ site_url }}/?q={search_term_string}"},
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "WebPage",
+      "@id": "{{ site_url }}/#webpage",
+      "url": "{{ site_url }}/",
+      "name": "{{ title }}",
+      "description": "{{ description }}",
+      "isPartOf": {"@id":"{{ site_url }}/#website"},
+      "about": {"@id":"{{ site_url }}/#organization"},
+      "inLanguage": "en-US"
+    },
+    {
+      "@type": "OfferCatalog",
+      "name": "{{ site_name }} Medical Supply Catalog",
+      "url": "{{ site_url }}",
+      "numberOfItems": {{ total if total is defined else 298396 }},
+      "itemListElement": [
+        {% if top_cats is defined %}{% for cat in top_cats %}
+        {"@type":"OfferCatalog","name":"{{ cat }} Supplies","url":"{{ site_url }}/c/{{ cat|lower|replace(' ','-')|replace('&','')|replace('/','-')|replace('--','-') }}"}{% if not loop.last %},{% endif %}
+        {% endfor %}{% endif %}
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": [
+        {"@type":"Question","name":"What types of medical supplies does Healix carry?","acceptedAnswer":{"@type":"Answer","text":"Healix carries over 298,000 clinical-grade medical supplies across 20 categories including gloves, wound care, oxygen concentrators, CPAP machines, BiPAP machines, ventilators, ostomy supplies, PPE, IV supplies, diagnostic equipment, incontinence products, and more."}},
+        {"@type":"Question","name":"Does Healix sell oxygen concentrators and CPAP machines?","acceptedAnswer":{"@type":"Answer","text":"Yes. Healix stocks home oxygen concentrators, portable oxygen concentrators, CPAP machines, BiPAP machines, and ventilators from brands including ResMed, Philips Respironics, Inogen, DeVilbiss, CAIRE, Medtronic, Hamilton Medical, and Drager."}},
+        {"@type":"Question","name":"Does Healix sell ileostomy bags and ostomy supplies?","acceptedAnswer":{"@type":"Answer","text":"Yes. Healix carries a comprehensive ostomy supply catalog including ileostomy pouches, colostomy pouches, ostomy barriers, skin care accessories, and irrigation sets from Coloplast, ConvaTec, Hollister, Marlen, Nu-Hope Laboratories, Cymed, Salts Healthcare, and Dansac."}},
+        {"@type":"Question","name":"What brands does Healix carry?","acceptedAnswer":{"@type":"Answer","text":"Healix carries {{ brand_count if brand_count is defined else 119 }}+ brands including 3M, Ansell, BD, Coloplast, ConvaTec, Cardinal Health, DeVilbiss, Drive Medical, Drager, Hamilton Medical, Hollister, Inogen, Invacare, Kimberly-Clark, McKesson, Medline, Medtronic, Philips Respironics, ResMed, and many more."}}
+      ]
+    }
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css?v=3">
+</head>
+<body>
+<header class="header" role="banner">
+  <div class="header-inner">
+    <a class="logo" href="/" aria-label="{{ site_name }} — Home">
+      <div class="logo-icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <span class="logo-text">{{ site_name }}</span>
+    </a>
+    <div class="header-search" role="search">
+      <label for="searchInput" class="sr-only">Search medical supplies</label>
+      <input id="searchInput" type="search" name="q" placeholder="Search 298,000 medical supplies..." autocomplete="off" aria-label="Search products">
+      <button id="searchBtn" aria-label="Submit search">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      </button>
+    </div>
+    <div class="header-meta">
+      <span id="totalCount" class="total-pill" aria-live="polite">—</span>
+      <button class="cart-btn" title="Cart" aria-label="Shopping cart">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+      </button>
+    </div>
+  </div>
+</header>
+<section class="hero-bar" aria-label="Catalog overview">
+  <div class="hero-inner">
+    <div class="hero-content">
+      <div class="hero-eyebrow">Clinical-grade supplies &nbsp;·&nbsp; <span>Trusted by 10,000+ facilities</span></div>
+      <h1>The Medical Supply<br><em>Platform</em></h1>
+      <p>298,000 products across 20 categories — everything from gloves to diagnostic equipment, sourced from the world's leading brands.</p>
+    </div>
+    <div class="hero-stats" id="heroStats" aria-label="Catalog statistics">
+      <div class="stat"><strong id="statProducts">298K</strong>Products</div>
+      <div class="stat"><strong id="statCategories">20</strong>Categories</div>
+      <div class="stat"><strong id="statBrands">—</strong>Brands</div>
+    </div>
+  </div>
+</section>
+<nav class="cat-nav" id="catNav" aria-label="Product categories">
+  <div class="cat-nav-inner">
+    <button class="cat-pill active" data-cat="" aria-pressed="true">All Categories</button>
+  </div>
+</nav>
+<div class="layout">
+  <aside class="sidebar" id="sidebar" aria-label="Filter products">
+    <div class="sidebar-header">
+      <h2>Filters</h2>
+      <button class="clear-btn" id="clearFilters">Clear all</button>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" id="subcat-label">Subcategory</label>
+      <div class="filter-scroll" id="subFilter" role="group" aria-labelledby="subcat-label"></div>
+    </div>
+    <div class="filter-group">
+      <label class="filter-label" for="brandSearch">Brand</label>
+      <input type="text" class="filter-search" id="brandSearch" placeholder="Search brands..." aria-label="Filter brands">
+      <div class="filter-scroll" id="brandFilter" role="group" aria-label="Brand list"></div>
+    </div>
+    <div class="filter-group">
+      <fieldset>
+        <legend class="filter-label">Price Range</legend>
+        <div class="price-inputs">
+          <label class="sr-only" for="minPrice">Minimum price</label>
+          <input type="number" id="minPrice" placeholder="Min $" min="0" aria-label="Minimum price">
+          <span aria-hidden="true">—</span>
+          <label class="sr-only" for="maxPrice">Maximum price</label>
+          <input type="number" id="maxPrice" placeholder="Max $" min="0" aria-label="Maximum price">
+        </div>
+      </fieldset>
+    </div>
+    <div class="filter-group">
+      <fieldset>
+        <legend class="filter-label">Availability</legend>
+        <label class="check-item"><input type="radio" name="avail" value="" checked> All</label>
+        <label class="check-item"><input type="radio" name="avail" value="In Stock"> In Stock</label>
+        <label class="check-item"><input type="radio" name="avail" value="Limited Stock"> Limited Stock</label>
+        <label class="check-item"><input type="radio" name="avail" value="Out of Stock (Backorder)"> Backorder</label>
+      </fieldset>
+    </div>
+    <div class="filter-group">
+      <fieldset>
+        <legend class="filter-label">Properties</legend>
+        <label class="check-item toggle">
+          <span>Latex Free</span>
+          <input type="checkbox" id="latexFree" aria-label="Latex free only">
+          <span class="toggle-slider" aria-hidden="true"></span>
+        </label>
+        <label class="check-item toggle">
+          <span>Sterile</span>
+          <input type="checkbox" id="sterileOnly" aria-label="Sterile only">
+          <span class="toggle-slider" aria-hidden="true"></span>
+        </label>
+      </fieldset>
+    </div>
+    <button class="apply-btn" id="applyFilters">Apply Filters</button>
+  </aside>
+  <main class="main-content" id="main-content" role="main">
+    <div class="toolbar" role="toolbar" aria-label="Results controls">
+      <div class="toolbar-left">
+        <button class="sidebar-toggle" id="sidebarToggle" aria-expanded="false" aria-controls="sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="16" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          Filters
+        </button>
+        <span class="results-label" id="resultsLabel" aria-live="polite" aria-atomic="true">Loading...</span>
+      </div>
+      <div class="toolbar-right">
+        <label class="sr-only" for="sortSelect">Sort by</label>
+        <select id="sortSelect" class="sort-select" aria-label="Sort products">
+          <option value="default">Relevance</option>
+          <option value="price_asc">Price: Low to High</option>
+          <option value="price_desc">Price: High to Low</option>
+          <option value="name">Name A-Z</option>
+          <option value="brand">Brand A-Z</option>
+        </select>
+        <div class="view-toggle" role="group" aria-label="View mode">
+          <button class="view-btn active" id="gridView" title="Grid view" aria-pressed="true">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+          </button>
+          <button class="view-btn" id="listView" title="List view" aria-pressed="false">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+    <div class="active-chips" id="activeChips" aria-label="Active filters" role="list"></div>
+    <div class="product-grid" id="productGrid" aria-live="polite" aria-label="Product results">
+      <div class="loading-state" id="loadingState">
+        <div class="spinner" role="status" aria-label="Loading products"></div>
+        <p>Loading products...</p>
+      </div>
+    </div>
+    <nav class="pagination" id="pagination" aria-label="Page navigation"></nav>
+    <section class="seo-links" aria-label="Browse by category">
+      <h2>Buy Medical Supplies Online by Category</h2>
+      <ul>
+        <li><a href="/c/wound-care">Buy Wound Care Supplies Online</a></li>
+        <li><a href="/c/gloves">Buy Medical Gloves Bulk</a></li>
+        <li><a href="/c/incontinence">Buy Incontinence Products</a></li>
+        <li><a href="/c/respiratory">Buy Oxygen Concentrators and CPAP Machines</a></li>
+        <li><a href="/c/respiratory/home-oxygen-concentrators">Buy Home Oxygen Concentrators</a></li>
+        <li><a href="/c/respiratory/portable-oxygen-concentrators">Buy Portable Oxygen Concentrators</a></li>
+        <li><a href="/c/respiratory/cpap-machines">Buy CPAP Machines Online</a></li>
+        <li><a href="/c/respiratory/bipap-machines">Buy BiPAP Machines Online</a></li>
+        <li><a href="/c/iv-vascular-access">Buy IV and Vascular Access Supplies</a></li>
+        <li><a href="/c/urology-ostomy">Buy Ostomy and Urology Supplies</a></li>
+        <li><a href="/c/urology-ostomy/ileostomy-pouches-one-piece-drainable">Buy Ileostomy Bags and Pouches</a></li>
+        <li><a href="/c/ppe">Buy PPE and Protective Equipment</a></li>
+        <li><a href="/c/mobility-dme">Buy Wheelchairs and DME</a></li>
+        <li><a href="/brands">Browse All Medical Supply Brands</a></li>
+      </ul>
+    </section>
+  </main>
+</div>
+<div class="modal-overlay" id="modalOverlay" role="dialog" aria-modal="true" aria-label="Product detail" aria-hidden="true">
+  <div class="modal" id="modal">
+    <button class="modal-close" id="modalClose" aria-label="Close product detail">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+    <div class="modal-body" id="modalBody"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.seo-links{display:none}</style>
+<script>
+  window.SITE_URL  = "{{ site_url }}";
+  window.SITE_NAME = "{{ site_name }}";
+</script>
+<script src="/static/js/app.js?v=3"></script>
+</body>
+</html>
