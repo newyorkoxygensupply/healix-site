@@ -56,8 +56,8 @@ h1.cat-title{font-family:var(--font-display);font-size:36px;letter-spacing:-0.03
 .faq-item{border-bottom:1px solid var(--border);padding:18px 0}
 .faq-item:last-child{border-bottom:none}
 .faq-q{font-size:15px;font-weight:600;color:var(--navy);margin-bottom:8px;cursor:pointer;display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
-.faq-q::after{content:'plus';font-size:18px;font-weight:400;color:var(--gray-300);flex-shrink:0}
-.faq-item.open .faq-q::after{content:'minus';color:var(--cobalt)}
+.faq-q::after{content:'＋';font-size:18px;font-weight:400;color:var(--gray-300);flex-shrink:0}
+.faq-item.open .faq-q::after{content:'−';color:var(--cobalt)}
 .faq-a{font-size:14px;color:var(--gray-500);line-height:1.8;display:none;padding-top:4px}
 .faq-item.open .faq-a{display:block}
 .related-section{margin-top:48px;border-top:1px solid var(--border);padding-top:32px}
@@ -83,7 +83,7 @@ h1.cat-title{font-family:var(--font-display);font-size:36px;letter-spacing:-0.03
     <div class="header-search" role="search">
       <form action="/" method="get">
         <label for="catSearch" class="sr-only">Search {{ (sub or cat)|lower }} supplies</label>
-        <input id="catSearch" type="search" name="q" placeholder="Search {{ (sub or cat)|lower }} supplies..." autocomplete="off">
+        <input id="catSearch" type="search" name="q" placeholder="Search {{ (sub or cat)|lower }} supplies…" autocomplete="off">
         <button type="submit" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
       </form>
     </div>
@@ -118,7 +118,7 @@ h1.cat-title{font-family:var(--font-display);font-size:36px;letter-spacing:-0.03
       {% for p in products %}
       <a href="{{ p.url }}" class="product-card" style="text-decoration:none;color:inherit">
         <div class="card-img">
-          <img src="{{ p.image_url_1 }}" alt="{{ p.product_name }}" width="220" height="220" loading="lazy" onerror="this.style.display='none'">
+          <img src="{{ p.image_url_1 or '/api/catimg/' + (p.category|slugify) + '/0' }}" alt="{{ p.product_name }}" width="220" height="220" loading="lazy" onerror="this.onerror=null;this.src='/api/catimg/{{ p.category|slugify }}/0'">
           <span class="card-badge {% if p.availability=='In Stock' %}badge-stock{% elif 'Limited' in p.availability %}badge-low{% else %}badge-out{% endif %}">{% if p.availability=='In Stock' %}In Stock{% elif 'Limited' in p.availability %}Limited{% else %}Backorder{% endif %}</span>
         </div>
         <div class="card-body">
