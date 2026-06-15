@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+<meta name="description" content="{{ description }}">
+<link rel="canonical" href="{{ canonical }}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ description }}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:site_name" content="{{ site_name }}">
+<meta property="og:image" content="{{ og_image }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ description }}">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {% for b in breadcrumbs %}
+        {"@type":"ListItem","position":{{ loop.index }},"name":{{ b.name|tojson }},"item":{{ b.url|tojson }}}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    },
+    {
+      "@type": "CollectionPage",
+      "url": {{ canonical|tojson }},
+      "name": {{ title|tojson }},
+      "description": {{ description|tojson }},
+      "isPartOf": {"@type":"WebSite","url":{{ site_url|tojson }}}
+    },
+    {
+      "@type": "ItemList",
+      "name": {{ ("Buy " + brand + " Medical Supplies")|tojson }},
+      "numberOfItems": {{ total }},
+      "itemListElement": [
+        {% for p in products[:12] %}
+        {"@type":"ListItem","position":{{ loop.index }},"url":{{ (site_url + p.url)|tojson }},"name":{{ p.product_name|tojson }}}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css?v=3">
+<style>
+.brand-page{max-width:1200px;margin:0 auto;padding:32px 20px}
+.breadcrumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--gray-400);margin-bottom:24px}
+.breadcrumb a{color:var(--cobalt);text-decoration:none}.breadcrumb a:hover{text-decoration:underline}
+.brand-hero{display:grid;grid-template-columns:1fr auto;gap:32px;align-items:start;margin-bottom:36px;padding:32px;background:var(--white);border:1px solid var(--border);border-radius:var(--r-xl)}
+@media(max-width:600px){.brand-hero{grid-template-columns:1fr}}
+.brand-name{font-family:var(--font-display);font-size:38px;letter-spacing:-0.03em;margin-bottom:8px}
+.brand-desc{font-size:15px;color:var(--gray-500);line-height:1.7;max-width:600px;margin-bottom:16px}
+.brand-meta{display:flex;gap:16px;flex-wrap:wrap}
+.brand-stat{background:var(--gray-50);border-radius:var(--r-sm);padding:12px 20px;text-align:center}
+.brand-stat strong{display:block;font-family:var(--font-display);font-size:24px;letter-spacing:-0.02em;color:var(--navy)}
+.brand-stat span{font-size:12px;color:var(--gray-400)}
+.brand-cats{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:28px}
+.brand-cat-pill{background:var(--gray-50);border:1px solid var(--border);border-radius:20px;padding:5px 14px;font-size:13px;font-weight:500;color:var(--gray-700);text-decoration:none;transition:.12s}
+.brand-cat-pill:hover{background:var(--cobalt-light);color:var(--cobalt);border-color:var(--cobalt)}
+h2.section-title{font-family:var(--font-display);font-size:24px;letter-spacing:-0.02em;margin-bottom:20px}
+.product-grid-brand{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px;margin-bottom:32px}
+.browse-more{display:inline-flex;align-items:center;gap:8px;background:var(--navy);color:var(--white);padding:12px 24px;border-radius:var(--r-sm);text-decoration:none;font-weight:600;font-size:14px;transition:.15s;margin-bottom:40px}
+.browse-more:hover{background:var(--cobalt)}
+.other-brands{margin-top:48px;border-top:1px solid var(--border);padding-top:32px}
+.brands-mini-grid{display:flex;flex-wrap:wrap;gap:8px}
+.brand-mini-link{background:var(--gray-50);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 14px;font-size:13px;color:var(--gray-600);text-decoration:none;transition:.12s}
+.brand-mini-link:hover{color:var(--cobalt);border-color:var(--cobalt)}
+</style>
+</head>
+<body>
+<header class="header" role="banner">
+  <div class="header-inner">
+    <a class="logo" href="/" aria-label="{{ site_name }} — Home">
+      <div class="logo-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+      <span class="logo-text">{{ site_name }}</span>
+    </a>
+    <div class="header-search" role="search">
+      <form action="/" method="get">
+        <input type="search" name="q" placeholder="Search {{ total|format_thousands }} {{ brand }} products..." autocomplete="off">
+        <button type="submit" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
+      </form>
+    </div>
+  </div>
+</header>
+
+<div class="brand-page">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    {% for b in breadcrumbs %}
+      {% if not loop.last %}<a href="{{ b.url }}">{{ b.name }}</a><span aria-hidden="true">›</span>
+      {% else %}<span aria-current="page">{{ b.name }}</span>{% endif %}
+    {% endfor %}
+  </nav>
+
+  <div class="brand-hero">
+    <div>
+      <h1 class="brand-name">{{ brand }}</h1>
+      {% if brand_desc %}<p class="brand-desc">{{ brand_desc }}</p>{% endif %}
+      <div class="brand-meta">
+        <div class="brand-stat"><strong>{{ total|format_thousands }}</strong><span>Products</span></div>
+        <div class="brand-stat"><strong>{{ brand_cats|length }}</strong><span>Categories</span></div>
+      </div>
+    </div>
+  </div>
+
+  {% if brand_cats %}
+  <nav class="brand-cats" aria-label="{{ brand }} product categories">
+    {% for cat in brand_cats %}
+    <a class="brand-cat-pill" href="/c/{{ cat|lower|replace(' ','-')|replace('&','')|replace('/','-')|replace('--','-') }}?brand={{ brand|urlencode }}">{{ cat }}</a>
+    {% endfor %}
+  </nav>
+  {% endif %}
+
+  <h2 class="section-title">{{ brand }} Products at {{ site_name }}</h2>
+  <div class="product-grid-brand">
+    {% for p in products %}
+    <a href="{{ p.url }}" class="product-card" style="text-decoration:none;color:inherit">
+      <div class="card-img">
+        <img src="{{ p.image_url_1 }}" alt="{{ p.product_name }}" width="220" height="220" loading="lazy" onerror="this.style.display='none'">
+        <span class="card-badge {% if p.availability == 'In Stock' %}badge-stock{% elif 'Limited' in p.availability %}badge-low{% else %}badge-out{% endif %}">
+          {% if p.availability == 'In Stock' %}In Stock{% elif 'Limited' in p.availability %}Limited{% else %}Backorder{% endif %}
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="card-brand">{{ p.subcategory or p.category }}</div>
+        <div class="card-name">{{ p.product_name }}</div>
+        <div class="card-footer"><div class="card-price">{{ p.price_each }}</div></div>
+      </div>
+    </a>
+    {% endfor %}
+  </div>
+
+  <a class="browse-more" href="/?brand={{ brand|urlencode }}">
+    Browse all {{ total|format_thousands }} {{ brand }} products →
+  </a>
+
+  <div class="other-brands">
+    <h2 class="section-title">Other Medical Supply Brands</h2>
+    <div class="brands-mini-grid">
+      {% for b in all_brands %}
+      {% if b != brand %}
+      <a class="brand-mini-link" href="/brand/{{ b|lower|replace(' ','-')|replace('.','')|replace('/','-') }}">{{ b }}</a>
+      {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+</div>
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
+</body>
+</html>
