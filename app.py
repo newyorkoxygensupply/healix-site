@@ -1,20 +1,20 @@
 """
-Healix — Production Flask backend (Exhaustive SEO Edition)
+Healix — Production Flask backend (Exhaustive SEO Edition) — SQLite build
 """
-import csv, os, re, math, hashlib, logging, json, urllib.parse, urllib.request, urllib.error
-from collections import defaultdict
-from datetime import date, datetime
+import os, re, math, hashlib, logging, json, threading, urllib.parse, urllib.request, urllib.error
+import sqlite3
+from datetime import date
 from pathlib import Path
 from dotenv import load_dotenv
-from flask import Flask, jsonify, request, render_template, Response, redirect, send_from_directory
+from flask import Flask, jsonify, request, render_template, Response, redirect
 from flask_compress import Compress
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 load_dotenv()
 
-BASE_DIR   = Path(__file__).parent
-CSV_PATH   = Path(os.getenv("CSV_PATH", BASE_DIR / "medical_supplies.csv"))
-IMG_CACHE  = BASE_DIR / ".img_cache"
+BASE_DIR       = Path(__file__).parent
+DB_PATH        = Path(os.getenv("DB_PATH", BASE_DIR / "medical_supplies.db"))
+IMG_CACHE      = BASE_DIR / ".img_cache"
 IMG_CACHE.mkdir(exist_ok=True)
 SITE_URL       = os.getenv("SITE_URL", "http://localhost:8080").rstrip("/")
 SITE_NAME      = os.getenv("SITE_NAME", "Healix")
@@ -45,57 +45,119 @@ def format_thousands(n):
     try: return f"{int(n):,}"
     except: return str(n)
 
-# ── Headers ────────────────────────────────────────────────────────────────────
+# ── Security headers ───────────────────────────────────────────────────────────
 @app.after_request
 def add_headers(resp):
-    # Security
     resp.headers.setdefault("X-Content-Type-Options", "nosniff")
     resp.headers.setdefault("X-Frame-Options",        "SAMEORIGIN")
     resp.headers.setdefault("X-XSS-Protection",       "1; mode=block")
     resp.headers.setdefault("Referrer-Policy",        "strict-origin-when-cross-origin")
-    # Cache static assets aggressively (1 year)
     if request.path.startswith("/static/"):
         resp.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     return resp
 
-# ── Load & Index ───────────────────────────────────────────────────────────────
-log.info("Loading %s …", CSV_PATH)
-PRODUCTS    = []
-CATEGORIES  = {}
-IDX_CAT     = defaultdict(list)
-IDX_SUB     = defaultdict(list)
-IDX_BRAND   = defaultdict(list)
-IDX_AVAIL   = defaultdict(list)
-IDX_LATEX   = defaultdict(list)
-IDX_STERILE = defaultdict(list)
-IDX_TEXT:   dict[str, set[int]] = defaultdict(set)
-PRODUCT_MAP:dict[str, int]      = {}
+# ── Database ───────────────────────────────────────────────────────────────────
+_db_local = threading.local()
 
-with open(CSV_PATH, newline="", encoding="utf-8") as f:
-    for i, row in enumerate(csv.DictReader(f)):
-        PRODUCTS.append(row)
-        PRODUCT_MAP[row["product_id"]] = i
-        cat = row.get("category", "Other")
-        sub = row.get("subcategory", "")
-        IDX_CAT[cat].append(i)
-        if sub: IDX_SUB[sub].append(i)
-        IDX_BRAND[row.get("brand", "")].append(i)
-        IDX_AVAIL[row.get("availability", "")].append(i)
-        IDX_LATEX[row.get("latex_free", "").lower()].append(i)
-        IDX_STERILE[row.get("sterile", "").lower()].append(i)
-        hay = " ".join([row.get("product_name",""), row.get("brand",""),
-                        row.get("category",""), row.get("subcategory",""),
-                        row.get("sku",""), row.get("description","")[:200]]).lower()
-        for tok in set(hay.split()):
-            if len(tok) >= 2: IDX_TEXT[tok].add(i)
+def get_db() -> sqlite3.Connection:
+    """Return a thread-local SQLite connection (opened lazily per worker/thread)."""
+    if not hasattr(_db_local, "conn"):
+        conn = sqlite3.connect(str(DB_PATH), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA journal_mode=WAL")
+        conn.execute("PRAGMA cache_size=-32000")    # 32 MB page cache per connection
+        conn.execute("PRAGMA temp_store=MEMORY")
+        conn.execute("PRAGMA mmap_size=268435456")  # 256 MB memory-mapped I/O
+        _db_local.conn = conn
+    return _db_local.conn
 
-CATEGORIES = {
-    k: sorted(set(PRODUCTS[i]["subcategory"] for i in v if PRODUCTS[i]["subcategory"]))
-    for k, v in sorted(IDX_CAT.items())
-}
-BRANDS = sorted(b for b in IDX_BRAND if b)
-log.info("Loaded %s products, %s categories, %s brands.",
-         f"{len(PRODUCTS):,}", len(CATEGORIES), len(BRANDS))
+# ── Startup — load navigation data (tiny) ─────────────────────────────────────
+log.info("Connecting to %s ...", DB_PATH)
+_boot = sqlite3.connect(str(DB_PATH))
+_boot.row_factory = sqlite3.Row
+
+TOTAL = _boot.execute("SELECT COUNT(*) FROM products").fetchone()[0]
+
+CATEGORIES: dict[str, list[str]] = {}
+for _r in _boot.execute(
+    "SELECT DISTINCT category, subcategory FROM products "
+    "WHERE category != '' ORDER BY category, subcategory"
+):
+    _cat, _sub = _r["category"], _r["subcategory"] or ""
+    if _cat not in CATEGORIES:
+        CATEGORIES[_cat] = []
+    if _sub and _sub not in CATEGORIES[_cat]:
+        CATEGORIES[_cat].append(_sub)
+
+BRANDS: list[str] = [
+    _r["brand"] for _r in _boot.execute(
+        "SELECT DISTINCT brand FROM products WHERE brand != '' ORDER BY brand"
+    )
+]
+_boot.close()
+log.info("Ready: %s products, %s categories, %s brands.",
+         f"{TOTAL:,}", len(CATEGORIES), len(BRANDS))
+
+# ── Query helper ───────────────────────────────────────────────────────────────
+def _query(category="", subcategory="", brand="", avail="", latex_free="",
+           sterile="", min_price="", max_price="", q="",
+           sort="default", limit=24, offset=0):
+    """
+    Filtered, paginated SQLite query.
+    Returns (total_count: int, rows: list[dict]).
+    """
+    db = get_db()
+
+    from_sql    = "FROM products p"
+    where_parts: list[str] = []
+    params:      list      = []
+
+    # Full-text search via FTS5 prefix matching
+    if q:
+        tokens = [t for t in q.lower().split() if len(t) >= 2]
+        if tokens:
+            fts_match = " ".join(f"{t}*" for t in tokens)
+            from_sql  = ("FROM products p "
+                         "JOIN products_fts fts ON fts.product_id = p.product_id")
+            where_parts.append("fts.search_text MATCH ?")
+            params.append(fts_match)
+
+    if category:    where_parts.append("p.category = ?");             params.append(category)
+    if subcategory: where_parts.append("p.subcategory = ?");          params.append(subcategory)
+    if brand:       where_parts.append("p.brand = ?");                params.append(brand)
+    if avail:       where_parts.append("p.availability = ?");         params.append(avail)
+    if latex_free:  where_parts.append("LOWER(p.latex_free) = ?");    params.append(latex_free.lower())
+    if sterile:     where_parts.append("LOWER(p.sterile) = ?");       params.append(sterile.lower())
+    if min_price:
+        where_parts.append(
+            "CAST(REPLACE(REPLACE(p.price_each,'$',''),',','') AS REAL) >= ?"
+        )
+        params.append(float(min_price))
+    if max_price:
+        where_parts.append(
+            "CAST(REPLACE(REPLACE(p.price_each,'$',''),',','') AS REAL) <= ?"
+        )
+        params.append(float(max_price))
+
+    where_sql = ("WHERE " + " AND ".join(where_parts)) if where_parts else ""
+
+    total = db.execute(
+        f"SELECT COUNT(*) {from_sql} {where_sql}", params
+    ).fetchone()[0]
+
+    order_sql = {
+        "price_asc":  "ORDER BY CAST(REPLACE(REPLACE(p.price_each,'$',''),',','') AS REAL) ASC",
+        "price_desc": "ORDER BY CAST(REPLACE(REPLACE(p.price_each,'$',''),',','') AS REAL) DESC",
+        "name":       "ORDER BY p.product_name ASC COLLATE NOCASE",
+        "brand":      "ORDER BY p.brand ASC COLLATE NOCASE",
+    }.get(sort, "ORDER BY p.rowid ASC")
+
+    rows = db.execute(
+        f"SELECT p.* {from_sql} {where_sql} {order_sql} LIMIT ? OFFSET ?",
+        params + [limit, offset],
+    ).fetchall()
+
+    return total, [dict(r) for r in rows]
 
 # ── SEO content library ────────────────────────────────────────────────────────
 CAT_SEO = {
@@ -117,10 +179,10 @@ CAT_SEO = {
              "offer excellent chemical resistance, and are comparable in tactile sensitivity to latex. Many facilities have "
              "transitioned entirely to nitrile."),
             ("What thickness should I choose for exam gloves?",
-             "For standard examinations, 3.0–4.5 mil thickness provides adequate protection. For chemotherapy drug handling "
-             "or heavy chemical exposure, choose 5.0 mil or higher. Surgical gloves are typically 6.0–8.5 mil."),
+             "For standard examinations, 3.0-4.5 mil thickness provides adequate protection. For chemotherapy drug handling "
+             "or heavy chemical exposure, choose 5.0 mil or higher. Surgical gloves are typically 6.0-8.5 mil."),
             ("Can I buy medical gloves in bulk?",
-             "Yes. Healix offers gloves by the box (50–300 count) and by the case (4–10 boxes). Bulk pricing is available "
+             "Yes. Healix offers gloves by the box (50-300 count) and by the case (4-10 boxes). Bulk pricing is available "
              "for facilities purchasing 10+ cases."),
         ],
     },
@@ -139,7 +201,7 @@ CAT_SEO = {
              "hydrogel dressings rehydrate dry wounds. Consult your clinician for a wound-specific protocol."),
             ("How often should wound dressings be changed?",
              "Dressing change frequency depends on wound type and exudate level. Lightly exuding wounds may require changes "
-             "every 3–7 days; heavily exuding wounds may require daily changes. Follow manufacturer guidance and clinical protocols."),
+             "every 3-7 days; heavily exuding wounds may require daily changes. Follow manufacturer guidance and clinical protocols."),
             ("What is the difference between sterile and non-sterile wound dressings?",
              "Sterile dressings are individually packaged and required for open wounds, surgical sites, and burns. "
              "Non-sterile dressings are suitable for intact skin or heavily colonized wounds where sterility is not critical."),
@@ -150,7 +212,7 @@ CAT_SEO = {
         "intro": ("Healix is your source for professional respiratory care equipment and disposables. Our catalog includes "
                   "home and portable oxygen concentrators, CPAP and BiPAP machines, ICU and portable ventilators, "
                   "nebulizers, suction catheters, tracheostomy supplies, nasal cannulas, and oxygen masks from brands "
-                  "including ResMed, Philips Respironics, Inogen, DeVilbiss, CAIRE, Dräger, Medtronic, and Hamilton Medical."),
+                  "including ResMed, Philips Respironics, Inogen, DeVilbiss, CAIRE, Drager, Medtronic, and Hamilton Medical."),
         "keywords": ["oxygen concentrator", "CPAP machine", "BiPAP machine", "ventilator", "portable oxygen concentrator",
                      "home oxygen therapy", "respiratory supplies", "nasal cannula", "nebulizer"],
         "faq": [
@@ -165,7 +227,7 @@ CAT_SEO = {
              "(pulse vs continuous), and FAA approval status."),
             ("How do home oxygen concentrators work?",
              "Home oxygen concentrators draw in room air, pass it through a molecular sieve (zeolite), and separate oxygen "
-             "from nitrogen to deliver 90–96% pure oxygen. They run continuously on household current and eliminate the need "
+             "from nitrogen to deliver 90-96% pure oxygen. They run continuously on household current and eliminate the need "
              "for oxygen cylinders."),
             ("Do I need a prescription for a home oxygen concentrator?",
              "Yes. Oxygen concentrators are Class II medical devices that require a prescription from a licensed physician. "
@@ -196,7 +258,7 @@ CAT_SEO = {
         "intro": ("Healix supplies operating rooms and surgical suites with the full spectrum of sterile surgical supplies. "
                   "Our 22,000+ OR products include sutures, surgical gowns, procedure drapes, electrosurgical devices, "
                   "sponges, instrument trays, skin closure products, and hemostatic agents from Kimberly-Clark, Halyard, "
-                  "Cardinal Health, Medline, Ethicon, and Mölnlycke."),
+                  "Cardinal Health, Medline, Ethicon, and Molnlycke."),
         "keywords": ["surgical supplies", "OR supplies", "sutures", "surgical drapes", "surgical gowns",
                      "electrosurgical", "hemostatic agents", "surgical instruments"],
         "faq": [
@@ -238,7 +300,7 @@ CAT_SEO = {
              "Surgical masks are fluid-resistant barriers that protect against droplets but do not provide the same "
              "level of airborne particle filtration. N95s require a fit test for proper protection."),
             ("Are KN95 masks equivalent to N95?",
-             "KN95 masks meet Chinese GB2626 standards and are designed to filter ≥95% of particles, but they are not "
+             "KN95 masks meet Chinese GB2626 standards and are designed to filter 95%+ of particles, but they are not "
              "NIOSH-certified. For healthcare settings, NIOSH-approved N95 respirators are the required standard."),
         ],
     },
@@ -267,8 +329,8 @@ CAT_SEO = {
                      "walking boot", "rehabilitation supplies", "cervical collar"],
         "faq": [
             ("What compression level is recommended for DVT prevention?",
-             "For DVT prophylaxis, graduated compression stockings of 15–20 mmHg or 20–30 mmHg are commonly used. "
-             "Anti-embolism stockings (8–18 mmHg) are used for non-ambulatory patients. Always confirm with physician "
+             "For DVT prophylaxis, graduated compression stockings of 15-20 mmHg or 20-30 mmHg are commonly used. "
+             "Anti-embolism stockings (8-18 mmHg) are used for non-ambulatory patients. Always confirm with physician "
              "guidance for specific patient populations."),
         ],
     },
@@ -306,7 +368,7 @@ CAT_SEO = {
         "headline": "Medical Nutrition — Enteral Formulas, Oral Supplements & Feeding Supplies",
         "intro": ("Healix stocks clinical nutrition products for patients requiring supplemental or complete nutritional "
                   "support. Our catalog includes tube feeding formulas, oral nutritional supplements, enteral feeding "
-                  "pumps and sets, and thickening agents from Abbott (Ensure, Jevity), Nestlé Health Science "
+                  "pumps and sets, and thickening agents from Abbott (Ensure, Jevity), Nestle Health Science "
                   "(Peptamen), Kate Farms, and Nestle Nutren."),
         "keywords": ["enteral nutrition", "tube feeding", "oral supplements", "Ensure", "Jevity",
                      "enteral formula", "medical nutrition"],
@@ -391,8 +453,8 @@ CAT_SEO = {
              "from the pouch, allowing pouch changes without removing the barrier — beneficial for skin integrity "
              "and convenience for active patients."),
             ("How often should an ileostomy pouch be changed?",
-             "One-piece pouches are typically changed every 1–3 days. Two-piece system barriers can last 3–5 days "
-             "with pouch changes as needed (usually every 1–2 days). Change frequency depends on the seal integrity, "
+             "One-piece pouches are typically changed every 1-3 days. Two-piece system barriers can last 3-5 days "
+             "with pouch changes as needed (usually every 1-2 days). Change frequency depends on the seal integrity, "
              "skin condition, and output characteristics."),
             ("What brands of ileostomy supplies does Healix carry?",
              "Healix carries products from all major ostomy manufacturers including Coloplast (SenSura Mio, Assura, Brava), "
@@ -406,7 +468,6 @@ CAT_SEO = {
     },
 }
 
-# Brand descriptions for SEO
 BRAND_SEO = {
     "3M": "3M Health Care is a global leader in medical supplies, infection prevention, skin care, and wound management. Known for the 3M Littmann stethoscope line and 3M Cavilon skin care products.",
     "Coloplast": "Coloplast develops products and services that make life easier for people with intimate healthcare needs — ostomy, urology, continence, and wound care.",
@@ -420,7 +481,7 @@ BRAND_SEO = {
     "Ansell": "Ansell is a global leader in protection solutions for healthcare, specializing in surgical gloves, exam gloves, and specialty protective products.",
     "Cardinal Health": "Cardinal Health is a global healthcare services company providing pharmaceutical and medical supply distribution, manufacturing, and consulting services.",
     "Medtronic": "Medtronic is the world's largest medical device company, manufacturing products across cardiac, neurological, diabetes, and surgical care specialties.",
-    "Dräger": "Dräger is a leading international company in the fields of medical and safety technology, known for anesthesia workstations, ventilators, and patient monitoring.",
+    "Drager": "Drager is a leading international company in the fields of medical and safety technology, known for anesthesia workstations, ventilators, and patient monitoring.",
     "Hamilton Medical": "Hamilton Medical is a Swiss medical device company specializing in intelligent ventilation solutions for ICU and transport settings.",
     "Dynarex": "Dynarex Corporation is a leading manufacturer of disposable medical products serving hospitals, nursing homes, physicians, and consumers.",
     "McKesson": "McKesson Corporation is a healthcare distribution company providing pharmaceutical, medical supply distribution, and health information technology.",
@@ -434,7 +495,6 @@ BRAND_SEO = {
     "CAIRE": "CAIRE Inc. manufactures home and portable oxygen therapy systems and respiratory products, including the FreeStyle Comfort and Eclipse portable concentrators.",
 }
 
-# Related categories map
 CAT_RELATED = {
     "Gloves":              ["PPE", "OR & Surgery", "Wound Care", "Lab Supplies"],
     "Wound Care":          ["Skin Care", "OR & Surgery", "First Aid", "Patient Care"],
@@ -461,8 +521,9 @@ CAT_RELATED = {
 # ── Helpers ────────────────────────────────────────────────────────────────────
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
+@app.template_filter('slugify')
 def slugify(text: str) -> str:
-    return _SLUG_RE.sub("-", text.lower()).strip("-")
+    return _SLUG_RE.sub("-", (text or "").lower()).strip("-")
 
 def _price_val(s):
     try: return float(str(s).replace("$","").replace(",","").strip())
@@ -471,17 +532,17 @@ def _price_val(s):
 def _proxy_img(url):
     return url or ""
 
-def _summary(p):
+def _summary(p: dict) -> dict:
     return {
-        "product_id":        p["product_id"],
-        "product_name":      p["product_name"],
-        "brand":             p["brand"],
-        "category":          p["category"],
-        "subcategory":       p["subcategory"],
-        "sku":               p["sku"],
-        "price_each":        p["price_each"],
+        "product_id":        p.get("product_id",""),
+        "product_name":      p.get("product_name",""),
+        "brand":             p.get("brand",""),
+        "category":          p.get("category",""),
+        "subcategory":       p.get("subcategory",""),
+        "sku":               p.get("sku",""),
+        "price_each":        p.get("price_each",""),
         "price_case":        p.get("price_case",""),
-        "availability":      p["availability"],
+        "availability":      p.get("availability",""),
         "image_url_1":       _proxy_img(p.get("image_url_1","")),
         "size":              p.get("size",""),
         "color":             p.get("color",""),
@@ -489,52 +550,19 @@ def _summary(p):
         "quantity_per_unit": p.get("quantity_per_unit",""),
         "latex_free":        p.get("latex_free",""),
         "sterile":           p.get("sterile",""),
-        "url":               f"/p/{p['product_id']}/{slugify(p['product_name'])}",
+        "url":               f"/p/{p.get('product_id','')}/{slugify(p.get('product_name',''))}",
     }
 
-def _filter(category, subcategory, brand, avail, latex_free, sterile,
-            min_price, max_price, q):
-    candidates = None
-    def narrow(idx_dict, key):
-        nonlocal candidates
-        s = set(idx_dict.get(key, []))
-        candidates = s if candidates is None else candidates & s
-    if category:    narrow(IDX_CAT,     category)
-    if subcategory: narrow(IDX_SUB,     subcategory)
-    if brand:       narrow(IDX_BRAND,   brand)
-    if avail:       narrow(IDX_AVAIL,   avail)
-    if latex_free:  narrow(IDX_LATEX,   latex_free.lower())
-    if sterile:     narrow(IDX_STERILE, sterile.lower())
-    if q:
-        for tok in q.lower().split():
-            if len(tok) < 2: continue
-            matching = IDX_TEXT.get(tok, set())
-            if len(tok) >= 4:
-                matching = matching | {i for t, s in IDX_TEXT.items() if t.startswith(tok) for i in s}
-            candidates = matching if candidates is None else candidates & matching
-    result = list(range(len(PRODUCTS))) if candidates is None else list(candidates)
-    if min_price or max_price:
-        mn = float(min_price) if min_price else None
-        mx = float(max_price) if max_price else None
-        result = [i for i in result
-                  if (mn is None or _price_val(PRODUCTS[i]["price_each"]) >= mn)
-                  and (mx is None or _price_val(PRODUCTS[i]["price_each"]) <= mx)]
-    return result
-
-def _seo_product_title(p):
-    """Intent-matched product title: Product Name — Brand | Category | Buy at Healix"""
-    price = p.get("price_each","")
-    avail = "In Stock" if p.get("availability") == "In Stock" else ""
+def _seo_product_title(p: dict) -> str:
     return (f"{p['product_name']} — {p['brand']} | "
             f"{p.get('subcategory') or p['category']} | {SITE_NAME}")
 
-def _seo_product_desc(p):
-    """155-char meta description with price, availability, CTA."""
-    desc = (p.get("description") or "").strip()
+def _seo_product_desc(p: dict) -> str:
+    desc  = (p.get("description") or "").strip()
     price = p.get("price_each","")
     avail = p.get("availability","")
     brand = p.get("brand","")
-    base = f"Buy {p['product_name']} by {brand}. {price}"
+    base  = f"Buy {p['product_name']} by {brand}. {price}"
     if avail: base += f" — {avail}."
     if desc:
         remaining = 155 - len(base) - 1
@@ -548,7 +576,7 @@ def _seo_cat_title(cat, sub=None, total=0):
     return f"Buy {cat} Medical Supplies Online | {SITE_NAME} — {total:,} Products"
 
 def _seo_cat_desc(cat, sub=None, total=0):
-    kws = CAT_SEO.get(cat, {}).get("keywords", [])
+    kws    = CAT_SEO.get(cat, {}).get("keywords", [])
     kw_str = ", ".join(kws[:3]) if kws else f"{cat.lower()} supplies"
     if sub:
         return (f"Shop {total:,} {sub} products online. {kw_str}. "
@@ -556,50 +584,49 @@ def _seo_cat_desc(cat, sub=None, total=0):
     return (f"Shop {total:,} {cat} medical supplies online. {kw_str}. "
             f"Trusted brands, competitive pricing, fast shipping. — {SITE_NAME}")
 
-# ── Main SPA ───────────────────────────────────────────────────────────────────
+# ── Main page ──────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
-    total = len(PRODUCTS)
     top_cats = list(CATEGORIES.keys())[:8]
     return render_template("index.html",
-        site_name=SITE_NAME,
-        site_url=SITE_URL,
-        title=f"Medical Supplies Online | Buy {SITE_NAME} — {total:,}+ Clinical-Grade Products",
+        site_name=SITE_NAME, site_url=SITE_URL,
+        title=f"Medical Supplies Online | Buy {SITE_NAME} — {TOTAL:,}+ Clinical-Grade Products",
         description=(
-            f"Shop {total:,}+ clinical-grade medical supplies at {SITE_NAME}. "
+            f"Shop {TOTAL:,}+ clinical-grade medical supplies at {SITE_NAME}. "
             "Gloves, wound care, oxygen concentrators, CPAP machines, ostomy supplies, PPE, "
             "IV supplies & more. Trusted brands, fast shipping."
         ),
         canonical=SITE_URL + "/",
         og_image=SITE_URL + "/static/img/og-default.jpg",
         top_cats=top_cats,
-        total=total,
+        total=TOTAL,
         brand_count=len(BRANDS),
     )
 
-# ── SSR Product page ───────────────────────────────────────────────────────────
+# ── Product page ───────────────────────────────────────────────────────────────
 @app.route("/p/<product_id>")
 @app.route("/p/<product_id>/<slug>")
 def product_page(product_id, slug=None):
-    idx = PRODUCT_MAP.get(product_id)
-    if idx is None:
+    row = get_db().execute(
+        "SELECT * FROM products WHERE product_id = ?", [product_id]
+    ).fetchone()
+    if row is None:
         return render_template("404.html", site_name=SITE_NAME, site_url=SITE_URL,
                                title="Product Not Found"), 404
-    p = PRODUCTS[idx]
+    p = dict(row)
+
     canonical_slug = slugify(p["product_name"])
     if slug != canonical_slug:
         return redirect(f"/p/{product_id}/{canonical_slug}", 301)
 
-    detail = dict(p)
     for key in ("image_url_1","image_url_2","image_url_3","image_url_4"):
-        if detail.get(key): detail[key] = _proxy_img(detail[key])
+        if p.get(key): p[key] = _proxy_img(p[key])
 
-    similar = [_summary(PRODUCTS[i]) for i in IDX_SUB.get(p["subcategory"], [])
-               if PRODUCTS[i]["product_id"] != product_id][:8]
+    _, sim_rows  = _query(subcategory=p.get("subcategory",""), limit=9)
+    similar      = [_summary(r) for r in sim_rows if r["product_id"] != product_id][:8]
 
-    # Same brand products
-    brand_products = [_summary(PRODUCTS[i]) for i in IDX_BRAND.get(p["brand"], [])
-                      if PRODUCTS[i]["product_id"] != product_id][:6]
+    _, brand_rows = _query(brand=p.get("brand",""), limit=7)
+    brand_products = [_summary(r) for r in brand_rows if r["product_id"] != product_id][:6]
 
     features = [f.strip() for f in (p.get("features","") or "").split("|") if f.strip()]
     specs = [
@@ -618,9 +645,8 @@ def product_page(product_id, slug=None):
         ("Shelf Life",   f"{p.get('shelf_life_years','')} years" if p.get("shelf_life_years") else ""),
         ("Storage",      p.get("storage_temp","")),
     ]
-    specs = [(l,v) for (l,v) in specs if v and v.strip() not in ("","N/A","/ ","")]
+    specs = [(l,v) for (l,v) in specs if v and str(v).strip() not in ("","N/A","/ ","")]
 
-    # Product FAQ
     faq = [
         (f"What is the SKU for {p['product_name'][:50]}?",
          f"The SKU is {p.get('sku','')}. {p.get('upc','') and 'UPC: ' + p['upc'] + '.' or ''}"),
@@ -631,21 +657,24 @@ def product_page(product_id, slug=None):
          f"This product is classified under {p['category']} > {p.get('subcategory','')}."),
     ]
 
-    title = _seo_product_title(p)
+    title       = _seo_product_title(p)
     description = _seo_product_desc(p)
 
-    breadcrumbs = [{"name": "Home", "url": SITE_URL + "/"}]
+    breadcrumbs = [{"name":"Home","url":SITE_URL+"/"}]
     if p.get("category"):
-        breadcrumbs.append({"name": p["category"], "url": f"{SITE_URL}/c/{slugify(p['category'])}"})
+        breadcrumbs.append({"name":p["category"],"url":f"{SITE_URL}/c/{slugify(p['category'])}"})
     if p.get("subcategory"):
-        breadcrumbs.append({"name": p["subcategory"], "url": f"{SITE_URL}/c/{slugify(p['category'])}/{slugify(p['subcategory'])}"})
-    breadcrumbs.append({"name": p["product_name"], "url": f"{SITE_URL}/p/{product_id}/{canonical_slug}"})
+        breadcrumbs.append({"name":p["subcategory"],
+                            "url":f"{SITE_URL}/c/{slugify(p['category'])}/{slugify(p['subcategory'])}"})
+    breadcrumbs.append({"name":p["product_name"],
+                        "url":f"{SITE_URL}/p/{product_id}/{canonical_slug}"})
 
-    avail_schema = ("http://schema.org/InStock" if p.get("availability") == "In Stock"
-                    else "http://schema.org/LimitedAvailability" if "Limited" in p.get("availability","")
+    avail_schema = ("http://schema.org/InStock"
+                    if p.get("availability") == "In Stock"
+                    else "http://schema.org/LimitedAvailability"
+                    if "Limited" in p.get("availability","")
                     else "http://schema.org/OutOfStock")
 
-    # Brand description
     brand_desc = BRAND_SEO.get(p.get("brand",""), "")
     brand_slug = slugify(p.get("brand",""))
 
@@ -654,7 +683,7 @@ def product_page(product_id, slug=None):
         title=title, description=description,
         canonical=f"{SITE_URL}/p/{product_id}/{canonical_slug}",
         og_image=_proxy_img(p.get("image_url_1","")),
-        p=detail, features=features, specs=specs,
+        p=p, features=features, specs=specs,
         similar=similar, brand_products=brand_products,
         breadcrumbs=breadcrumbs, faq=faq,
         price_val=_price_val(p.get("price_each","")),
@@ -663,7 +692,7 @@ def product_page(product_id, slug=None):
         today=TODAY,
     )
 
-# ── SSR Category page ──────────────────────────────────────────────────────────
+# ── Category page ──────────────────────────────────────────────────────────────
 @app.route("/c/<cat_slug>")
 @app.route("/c/<cat_slug>/<sub_slug>")
 def category_page(cat_slug, sub_slug=None):
@@ -677,16 +706,15 @@ def category_page(cat_slug, sub_slug=None):
         if not sub:
             return redirect(f"/c/{cat_slug}", 301)
 
-    indices = _filter(cat, sub or "", "", "", "", "", "", "", "")
-    total   = len(indices)
-    preview = [_summary(PRODUCTS[i]) for i in indices[:24]]
+    total, preview_rows = _query(category=cat, subcategory=sub or "", limit=24)
+    preview = [_summary(r) for r in preview_rows]
 
-    # Top brands in this category
-    brand_counts = {}
-    for i in indices[:1000]:
-        b = PRODUCTS[i]["brand"]
-        brand_counts[b] = brand_counts.get(b,0) + 1
-    top_brands = sorted(brand_counts, key=lambda b: -brand_counts[b])[:8]
+    top_brand_rows = get_db().execute(
+        "SELECT brand, COUNT(*) as cnt FROM products "
+        "WHERE category = ? AND brand != '' GROUP BY brand ORDER BY cnt DESC LIMIT 8",
+        [cat]
+    ).fetchall()
+    top_brands = [r["brand"] for r in top_brand_rows]
 
     seo  = CAT_SEO.get(cat, {})
     faq  = seo.get("faq", [])
@@ -718,7 +746,7 @@ def category_page(cat_slug, sub_slug=None):
         top_brands=top_brands,
     )
 
-# ── Brand landing pages ────────────────────────────────────────────────────────
+# ── Brand page ─────────────────────────────────────────────────────────────────
 @app.route("/brand/<brand_slug>")
 def brand_page(brand_slug):
     brand = next((b for b in BRANDS if slugify(b) == brand_slug), None)
@@ -726,12 +754,13 @@ def brand_page(brand_slug):
         return render_template("404.html", site_name=SITE_NAME, site_url=SITE_URL,
                                title="Brand Not Found"), 404
 
-    indices = list(IDX_BRAND.get(brand, []))
-    total   = len(indices)
-    preview = [_summary(PRODUCTS[i]) for i in indices[:24]]
+    total, preview_rows = _query(brand=brand, limit=24)
+    preview = [_summary(r) for r in preview_rows]
 
-    # Categories this brand covers
-    brand_cats = sorted(set(PRODUCTS[i]["category"] for i in indices))
+    brand_cats = [r["category"] for r in get_db().execute(
+        "SELECT DISTINCT category FROM products WHERE brand = ? AND category != '' ORDER BY category",
+        [brand]
+    ).fetchall()]
 
     title = (f"Buy {brand} Medical Supplies Online | {SITE_NAME} — "
              f"{total:,} {brand} Products")
@@ -759,15 +788,19 @@ def brand_page(brand_slug):
 # ── Brands index ───────────────────────────────────────────────────────────────
 @app.route("/brands")
 def brands_page():
-    brand_data = []
-    for b in BRANDS:
-        cnt = len(IDX_BRAND.get(b,[]))
-        brand_data.append({"name":b,"slug":slugify(b),"count":cnt,
-                           "desc":BRAND_SEO.get(b,"")})
+    rows = get_db().execute(
+        "SELECT brand, COUNT(*) as cnt FROM products "
+        "WHERE brand != '' GROUP BY brand ORDER BY brand"
+    ).fetchall()
+    brand_data = [
+        {"name":r["brand"], "slug":slugify(r["brand"]),
+         "count":r["cnt"],  "desc":BRAND_SEO.get(r["brand"],"")}
+        for r in rows
+    ]
     return render_template("brands.html",
         site_name=SITE_NAME, site_url=SITE_URL,
         title=f"All Medical Supply Brands | {SITE_NAME} — Shop by Brand",
-        description=(f"Browse all {len(BRANDS)} medical supply brands at {SITE_NAME}. "
+        description=(f"Browse all {len(brand_data)} medical supply brands at {SITE_NAME}. "
                      f"Shop Coloplast, ConvaTec, Hollister, ResMed, 3M, Medline, Ansell and more."),
         canonical=f"{SITE_URL}/brands",
         og_image=SITE_URL + "/static/img/og-default.jpg",
@@ -777,7 +810,7 @@ def brands_page():
 # ── API ────────────────────────────────────────────────────────────────────────
 @app.route("/api/meta")
 def meta():
-    resp = jsonify({"total":len(PRODUCTS),"categories":CATEGORIES,"brands":BRANDS[:200]})
+    resp = jsonify({"total":TOTAL,"categories":CATEGORIES,"brands":BRANDS[:200]})
     resp.headers["Cache-Control"] = "public, max-age=300"
     return resp
 
@@ -799,43 +832,44 @@ def products():
     except ValueError:
         return jsonify({"error":"Invalid page/per_page"}), 400
 
-    indices = _filter(category,subcategory,brand,avail,latex_free,sterile,min_price,max_price,q)
+    total, rows = _query(
+        category, subcategory, brand, avail, latex_free, sterile,
+        min_price, max_price, q, sort_by,
+        limit=per_page, offset=(page-1)*per_page,
+    )
 
-    if sort_by=="price_asc":   indices.sort(key=lambda i:_price_val(PRODUCTS[i]["price_each"]))
-    elif sort_by=="price_desc":indices.sort(key=lambda i:_price_val(PRODUCTS[i]["price_each"]),reverse=True)
-    elif sort_by=="name":      indices.sort(key=lambda i:PRODUCTS[i]["product_name"])
-    elif sort_by=="brand":     indices.sort(key=lambda i:PRODUCTS[i]["brand"])
-
-    total       = len(indices)
-    total_pages = max(1,-(-total//per_page))
-    page        = min(page,total_pages)
-    start       = (page-1)*per_page
+    total_pages = max(1, -(-total // per_page))
+    page        = min(page, total_pages)
 
     return jsonify({
-        "total":total,"page":page,"per_page":per_page,
+        "total":total, "page":page, "per_page":per_page,
         "total_pages":total_pages,
-        "products":[_summary(PRODUCTS[i]) for i in indices[start:start+per_page]],
+        "products":[_summary(r) for r in rows],
     })
 
 @app.route("/api/product/<product_id>")
 def product_detail(product_id):
-    idx = PRODUCT_MAP.get(product_id)
-    if idx is None: return jsonify({"error":"Not found"}), 404
-    detail = dict(PRODUCTS[idx])
+    row = get_db().execute(
+        "SELECT * FROM products WHERE product_id = ?", [product_id]
+    ).fetchone()
+    if row is None:
+        return jsonify({"error":"Not found"}), 404
+    detail = dict(row)
     for key in ("image_url_1","image_url_2","image_url_3","image_url_4"):
         if detail.get(key): detail[key] = _proxy_img(detail[key])
     return jsonify(detail)
 
 @app.route("/api/similar/<product_id>")
 def similar(product_id):
-    idx = PRODUCT_MAP.get(product_id)
-    if idx is None: return jsonify([])
-    target = PRODUCTS[idx]
-    results = [_summary(PRODUCTS[i]) for i in IDX_SUB.get(target["subcategory"],[])
-               if PRODUCTS[i]["product_id"] != product_id][:8]
-    return jsonify(results)
+    row = get_db().execute(
+        "SELECT subcategory FROM products WHERE product_id = ?", [product_id]
+    ).fetchone()
+    if row is None:
+        return jsonify([])
+    _, rows = _query(subcategory=row["subcategory"], limit=9)
+    return jsonify([_summary(r) for r in rows if r["product_id"] != product_id][:8])
 
-# ── Category image data — SVG generated server-side, no external requests ───────
+# ── Category image helpers ─────────────────────────────────────────────────────
 CAT_IMG_DATA = {
     "gloves":           {"bg":"#dbeafe","fg":"#1e40af","label":"Medical Gloves",    "icons":["M160 100 C140 100 125 112 125 130 L125 200 C125 215 135 222 145 222 L175 222 C185 222 195 215 195 200 L195 130 C195 112 180 100 160 100Z M140 130 L140 222 M155 127 L155 222 M170 127 L170 222 M185 130 L185 222","M150 95 C130 95 115 108 115 125 L115 195 C115 210 125 220 140 220 L180 220 C195 220 205 210 205 195 L205 125 C205 108 190 95 170 95Z M130 125 L130 220","M155 90 C132 90 115 105 115 125 L115 200 C115 215 128 222 145 222 L175 222 C192 222 205 215 205 200 L205 125 C205 105 188 90 165 90Z"]},
     "wound-care":       {"bg":"#fce7f3","fg":"#9d174d","label":"Wound Care",        "icons":["M160 88 L160 232 M88 160 L232 160","M125 100 L195 100 L205 120 L205 210 L115 210 L115 120Z M140 145 L180 145 M140 165 L180 165"]},
@@ -860,50 +894,35 @@ CAT_IMG_DATA = {
 }
 
 PEXELS_QUERIES = {
-    "gloves":       "medical disposable gloves",
-    "wound-care":   "wound care medical dressing",
-    "incontinence": "adult care medical supplies",
-    "diagnostic":   "medical stethoscope equipment",
-    "or-surgery":   "surgical operating room",
-    "respiratory":  "oxygen concentrator medical",
-    "iv":           "hospital IV intravenous drip",
-    "orthopedic":   "physical therapy rehabilitation",
-    "skin-care":    "medical skin care cream",
-    "ppe":          "medical protective mask PPE",
-    "patient-care": "hospital patient care nursing",
-    "ostomy":       "medical supply ostomy",
-    "lab":          "medical laboratory test tube",
-    "nutrition":    "medical nutrition enteral",
-    "textiles":     "medical scrubs hospital uniform",
-    "first-aid":    "first aid kit medical",
-    "pharmacy":     "pharmacy medicine pills capsules",
-    "mobility":     "wheelchair disability mobility",
-    "dental":       "dental teeth equipment",
-    "pediatric":    "pediatric children hospital medical",
+    "gloves":"medical disposable gloves","wound-care":"wound care medical dressing",
+    "incontinence":"adult care medical supplies","diagnostic":"medical stethoscope equipment",
+    "or-surgery":"surgical operating room","respiratory":"oxygen concentrator medical",
+    "iv":"hospital IV intravenous drip","orthopedic":"physical therapy rehabilitation",
+    "skin-care":"medical skin care cream","ppe":"medical protective mask PPE",
+    "patient-care":"hospital patient care nursing","ostomy":"medical supply ostomy",
+    "lab":"medical laboratory test tube","nutrition":"medical nutrition enteral",
+    "textiles":"medical scrubs hospital uniform","first-aid":"first aid kit medical",
+    "pharmacy":"pharmacy medicine pills capsules","mobility":"wheelchair disability mobility",
+    "dental":"dental teeth equipment","pediatric":"pediatric children hospital medical",
 }
 
-# Per-category Pexels photo ID cache (populated at runtime)
 _PEXELS_CACHE: dict[str, list[str]] = {}
 
 def _fetch_pexels_photos(query: str, count: int = 8) -> list[str]:
-    """Fetch photo URLs from Pexels API for a search query."""
     if not PEXELS_API_KEY:
         return []
-    cache_key = hashlib.sha1(f"pexels-{query}".encode()).hexdigest()
+    cache_key  = hashlib.sha1(f"pexels-{query}".encode()).hexdigest()
     cache_file = IMG_CACHE / f"{cache_key}.json"
     if cache_file.exists():
-        try:
-            return json.loads(cache_file.read_text())
-        except Exception:
-            pass
+        try: return json.loads(cache_file.read_text())
+        except Exception: pass
     try:
         url = f"https://api.pexels.com/v1/search?query={urllib.parse.quote(query)}&per_page={count}&orientation=square"
         req = urllib.request.Request(url, headers={"Authorization": PEXELS_API_KEY})
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())
-        photos = [p["src"]["medium"] for p in data.get("photos", [])]
-        if photos:
-            cache_file.write_text(json.dumps(photos))
+        photos = [p["src"]["medium"] for p in data.get("photos",[])]
+        if photos: cache_file.write_text(json.dumps(photos))
         return photos
     except Exception as e:
         log.warning("Pexels API error: %s", e)
@@ -911,15 +930,12 @@ def _fetch_pexels_photos(query: str, count: int = 8) -> list[str]:
 
 @app.route("/api/photo/<cat_slug>/<int:n>")
 def category_photo(cat_slug, n):
-    """Return a real Pexels photo if available, otherwise the category SVG.
-    Never returns 404 — the browser always gets a displayable image."""
     if cat_slug not in _PEXELS_CACHE:
         query = PEXELS_QUERIES.get(cat_slug, "medical supplies")
         _PEXELS_CACHE[cat_slug] = _fetch_pexels_photos(query)
-
     photos = _PEXELS_CACHE.get(cat_slug, [])
     if photos:
-        photo_url = photos[n % len(photos)]
+        photo_url  = photos[n % len(photos)]
         cache_key  = hashlib.sha1(photo_url.encode()).hexdigest()
         cache_file = IMG_CACHE / cache_key
         if cache_file.exists():
@@ -939,30 +955,25 @@ def category_photo(cat_slug, n):
             return resp
         except Exception as e:
             log.debug("Pexels photo fetch failed: %s", e)
-
-    # Pexels unavailable — fall through to the always-working SVG
     return redirect(f"/api/catimg/{cat_slug}/{n % 2}")
 
 @app.route("/api/has-photos")
 def has_photos():
-    """Tells the frontend whether real photos are available."""
     return jsonify({"pexels": bool(PEXELS_API_KEY)})
 
 @app.route("/api/catimg/<cat_slug>/<int:n>")
 def category_image(cat_slug, n):
-    """Generate and serve an SVG product image for a category — no external requests."""
     data = CAT_IMG_DATA.get(cat_slug, CAT_IMG_DATA["patient-care"])
     bg, fg, label = data["bg"], data["fg"], data["label"]
     icons = data["icons"]
     icon  = icons[n % len(icons)]
 
-    # Subtle background variation per index
     def darken(h, f):
-        h = h.lstrip('#')
+        h = h.lstrip("#")
         r,g,b = int(h[0:2],16), int(h[2:4],16), int(h[4:6],16)
         return f"#{min(255,int(r*f)):02x}{min(255,int(g*f)):02x}{min(255,int(b*f)):02x}"
 
-    bg2  = darken(bg, 0.94)
+    bg2    = darken(bg, 0.94)
     icon_c = darken(fg, 0.88 if n % 2 else 1.0)
 
     svg = f'''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
@@ -982,60 +993,34 @@ def category_image(cat_slug, n):
     resp = Response(svg, mimetype="image/svg+xml")
     resp.headers["Cache-Control"] = "public, max-age=86400"
     return resp
-    data, ct = _fetch_and_cache(wiki_url, cache_key)
-
-    if data:
-        resp = Response(data, content_type=ct or "image/jpeg")
-        resp.headers["Cache-Control"] = "public, max-age=604800"   # 7 days
-        return resp
-
-    # Fallback: serve a clean SVG placeholder (never fails)
-    return Response("", status=404)
 
 @app.route("/api/img")
 def proxy_image():
-    """Legacy proxy — kept for compatibility."""
-    url = request.args.get("url","")
-    allowed = ("https://www.medline.com/", "https://upload.wikimedia.org/",
-               "https://en.wikipedia.org/")
-    if not any(url.startswith(p) for p in allowed):
-        return Response("",status=400)
-    cache_key  = hashlib.sha1(url.encode()).hexdigest()
-    data, ct = _fetch_and_cache(url, cache_key)
-    if data:
-        resp = Response(data, content_type=ct or "image/jpeg")
-        resp.headers["Cache-Control"] = "public, max-age=604800"
-        return resp
-    return Response("",status=404)
+    """Legacy image proxy — kept for URL compatibility."""
+    return Response("", status=404)
 
 # ── robots.txt ─────────────────────────────────────────────────────────────────
 @app.route("/robots.txt")
 def robots():
-    n_batches = math.ceil(len(PRODUCTS) / 50_000)
-    sitemap_list = "\n".join([
-        f"Sitemap: {SITE_URL}/sitemap.xml",
-        f"Sitemap: {SITE_URL}/sitemap-categories.xml",
-        f"Sitemap: {SITE_URL}/sitemap-brands.xml",
-    ] + [f"Sitemap: {SITE_URL}/sitemap-products-{b}.xml" for b in range(1,n_batches+1)])
-
+    n_batches   = math.ceil(TOTAL / 50_000)
+    sitemap_list = "\n".join(
+        [f"Sitemap: {SITE_URL}/sitemap.xml",
+         f"Sitemap: {SITE_URL}/sitemap-categories.xml",
+         f"Sitemap: {SITE_URL}/sitemap-brands.xml"]
+        + [f"Sitemap: {SITE_URL}/sitemap-products-{b}.xml" for b in range(1, n_batches+1)]
+    )
     body = f"""User-agent: *
 Allow: /
 Allow: /c/
 Allow: /p/
 Allow: /brand/
 Allow: /brands
-Allow: /faq
 Disallow: /api/
-Disallow: /api/img
 Disallow: /health
-
-# Block duplicate filter URLs from crawlers (canonicals handle them)
 Disallow: /*?sort=
 Disallow: /*?avail=
 Disallow: /*?latex_free=
 Disallow: /*?sterile=
-
-# Crawl-delay for budget management
 Crawl-delay: 1
 
 {sitemap_list}
@@ -1048,13 +1033,13 @@ SITEMAP_BATCH = 50_000
 
 @app.route("/sitemap.xml")
 def sitemap_index():
-    n_batches = math.ceil(len(PRODUCTS) / SITEMAP_BATCH)
-    sitemaps = [
-        (f"{SITE_URL}/sitemap-categories.xml", TODAY),
-        (f"{SITE_URL}/sitemap-brands.xml",     TODAY),
-    ] + [(f"{SITE_URL}/sitemap-products-{b}.xml", TODAY) for b in range(1,n_batches+1)]
-
-    body = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    n_batches = math.ceil(TOTAL / SITEMAP_BATCH)
+    sitemaps  = (
+        [(f"{SITE_URL}/sitemap-categories.xml", TODAY),
+         (f"{SITE_URL}/sitemap-brands.xml",     TODAY)]
+        + [(f"{SITE_URL}/sitemap-products-{b}.xml", TODAY) for b in range(1, n_batches+1)]
+    )
+    body  = '<?xml version="1.0" encoding="UTF-8"?>\n'
     body += '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     for loc, lastmod in sitemaps:
         body += f"  <sitemap><loc>{loc}</loc><lastmod>{lastmod}</lastmod></sitemap>\n"
@@ -1071,7 +1056,6 @@ def sitemap_categories():
         entries.append((f"/c/{cs}", 0.9, "weekly"))
         for sub in subs:
             entries.append((f"/c/{cs}/{slugify(sub)}", 0.8, "weekly"))
-
     body  = '<?xml version="1.0" encoding="UTF-8"?>\n'
     body += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
     for path, pri, freq in entries:
@@ -1103,14 +1087,18 @@ def sitemap_brands():
 
 @app.route("/sitemap-products-<int:batch>.xml")
 def sitemap_products(batch):
-    start = (batch-1)*SITEMAP_BATCH
-    end   = start+SITEMAP_BATCH
-    if start >= len(PRODUCTS): return Response("",status=404)
+    start = (batch - 1) * SITEMAP_BATCH
+    if start >= TOTAL:
+        return Response("", status=404)
+    rows = get_db().execute(
+        "SELECT product_id, product_name, date_added FROM products LIMIT ? OFFSET ?",
+        [SITEMAP_BATCH, start]
+    ).fetchall()
     body  = '<?xml version="1.0" encoding="UTF-8"?>\n'
     body += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    for p in PRODUCTS[start:end]:
-        loc = f"{SITE_URL}/p/{p['product_id']}/{slugify(p['product_name'])}"
-        added = p.get("date_added", TODAY) or TODAY
+    for r in rows:
+        loc   = f"{SITE_URL}/p/{r['product_id']}/{slugify(r['product_name'])}"
+        added = r["date_added"] or TODAY
         body += (f"  <url><loc>{loc}</loc>"
                  f"<lastmod>{added}</lastmod>"
                  f"<changefreq>monthly</changefreq>"
@@ -1123,7 +1111,7 @@ def sitemap_products(batch):
 # ── Health ─────────────────────────────────────────────────────────────────────
 @app.route("/health")
 def health():
-    return jsonify({"status":"ok","products":len(PRODUCTS),"brands":len(BRANDS)})
+    return jsonify({"status":"ok","products":TOTAL,"brands":len(BRANDS)})
 
 # ── Error handlers ─────────────────────────────────────────────────────────────
 @app.errorhandler(404)
