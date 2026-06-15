@@ -97,12 +97,11 @@ function hashCode(str) {
   return Math.abs(h);
 }
 
-// Returns a same-origin image URL — server always responds with an image
-// (real Pexels photo if key works, else category SVG — never a broken image)
+// Returns a same-origin catimg SVG URL — server always responds with an image
 function getProductImageUrl(category, productId) {
   const slug = CAT_SLUG[category] || 'patient-care';
   const n    = hashCode(productId || '') % 8;
-  return `/api/photo/${slug}/${n}`;
+  return `/api/catimg/${slug}/${n}`;
 }
 
 function getPicsumUrl(productId) { return ''; }  // unused — server handles fallback
@@ -438,7 +437,7 @@ function renderProducts(products) {
         <div class="card-img">
           <img src="${getProductImageUrl(p.category, p.product_id)}" alt="${escHtml(p.product_name)}"
                loading="lazy"
-               onerror="this.style.opacity='0.4'">
+               onerror="this.onerror=null;this.src='/api/catimg/'+(this.dataset.slug||'patient-care')+'/0'">
           <div class="img-placeholder" style="display:none">${emoji}</div>
           <span class="card-badge ${badgeCls}">${badgeTxt}</span>
         </div>
@@ -561,7 +560,7 @@ async function openProduct(productId) {
       <div class="modal-gallery">
         <div class="modal-main-img" id="mainImgWrap">
           <img id="mainImg" src="${getProductImageUrl(p.category, p.product_id)}" alt="${escHtml(p.product_name)}"
-               onerror="this.style.opacity='0.4'">
+               onerror="this.onerror=null;this.src='/api/catimg/'+(this.dataset.slug||'patient-care')+'/0'">
           <div id="mainImgPlaceholder" style="display:none"></div>
         </div>
         <div class="modal-thumbs">
@@ -627,7 +626,7 @@ async function openProduct(productId) {
             <div class="card-img">
               <img src="${getProductImageUrl(sp.category, sp.product_id)}" alt="${escHtml(sp.product_name)}"
                    loading="lazy"
-                   onerror="this.style.opacity='0.4'">
+                   onerror="this.onerror=null;this.src='/api/catimg/'+(this.dataset.slug||'patient-care')+'/0'">
               <div class="img-placeholder" style="display:none"></div>
             </div>
             <div class="card-body">
