@@ -436,8 +436,7 @@ function renderProducts(products) {
       <a href="${productHref}" class="card-seo-link" aria-label="${escHtml(p.product_name)}" tabindex="-1"></a>
         <div class="card-img">
           <img src="${getProductImageUrl(p.category, p.product_id)}" alt="${escHtml(p.product_name)}"
-               loading="lazy"
-               onerror="this.onerror=null;this.src='/api/catimg/'+(this.dataset.slug||'patient-care')+'/0'">
+               onerror="this.onerror=null;this.src='/api/catimg/patient-care/0'">
           <div class="img-placeholder" style="display:none">${emoji}</div>
           <span class="card-badge ${badgeCls}">${badgeTxt}</span>
         </div>
@@ -560,14 +559,14 @@ async function openProduct(productId) {
       <div class="modal-gallery">
         <div class="modal-main-img" id="mainImgWrap">
           <img id="mainImg" src="${getProductImageUrl(p.category, p.product_id)}" alt="${escHtml(p.product_name)}"
-               onerror="this.onerror=null;this.src='/api/catimg/'+(this.dataset.slug||'patient-care')+'/0'">
+               onerror="this.onerror=null;this.src='/api/catimg/patient-care/0'">
           <div id="mainImgPlaceholder" style="display:none"></div>
         </div>
         <div class="modal-thumbs">
           ${[0,1,2,3].map(i => {
             const src = getProductImageUrl(p.category, p.product_id + '_' + i);
             return `<div class="modal-thumb ${i===0?'active':''}" onclick="switchImg(this,'${src}')">
-              <img src="${src}" alt="Product view ${i+1}" loading="lazy" onerror="this.parentElement.style.display='none'">
+              <img src="${src}" alt="Product view ${i+1}" onerror="this.parentElement.style.display='none'">
             </div>`;
           }).join('')}
         </div>
@@ -625,8 +624,7 @@ async function openProduct(productId) {
           <div class="product-card" onclick="openProduct('${sp.product_id}')" style="cursor:pointer">
             <div class="card-img">
               <img src="${getProductImageUrl(sp.category, sp.product_id)}" alt="${escHtml(sp.product_name)}"
-                   loading="lazy"
-                   onerror="this.onerror=null;this.src='/api/catimg/'+(this.dataset.slug||'patient-care')+'/0'">
+                   onerror="this.onerror=null;this.src='/api/catimg/patient-care/0'">
               <div class="img-placeholder" style="display:none"></div>
             </div>
             <div class="card-body">
