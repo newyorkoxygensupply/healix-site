@@ -72,11 +72,25 @@ def get_db() -> sqlite3.Connection:
     return _db_local.conn
 
 # ── Startup — load navigation data (tiny) ─────────────────────────────────────
-log.info("Connecting to %s ...", DB_PATH)
+log.info("Connecting to %s …", DB_PATH)
 _boot = sqlite3.connect(str(DB_PATH))
 _boot.row_factory = sqlite3.Row
 
 TOTAL = _boot.execute("SELECT COUNT(*) FROM products").fetchone()[0]
+
+# Create inquiries table if not exists
+_boot.execute("""CREATE TABLE IF NOT EXISTS inquiries (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    product_id    TEXT,
+    product_name  TEXT,
+    brand         TEXT,
+    customer_name TEXT,
+    phone         TEXT,
+    email         TEXT,
+    message       TEXT,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+)""")
+_boot.commit()
 
 CATEGORIES: dict[str, list[str]] = {}
 for _r in _boot.execute(
@@ -179,10 +193,10 @@ CAT_SEO = {
              "offer excellent chemical resistance, and are comparable in tactile sensitivity to latex. Many facilities have "
              "transitioned entirely to nitrile."),
             ("What thickness should I choose for exam gloves?",
-             "For standard examinations, 3.0-4.5 mil thickness provides adequate protection. For chemotherapy drug handling "
-             "or heavy chemical exposure, choose 5.0 mil or higher. Surgical gloves are typically 6.0-8.5 mil."),
+             "For standard examinations, 3.0–4.5 mil thickness provides adequate protection. For chemotherapy drug handling "
+             "or heavy chemical exposure, choose 5.0 mil or higher. Surgical gloves are typically 6.0–8.5 mil."),
             ("Can I buy medical gloves in bulk?",
-             "Yes. Healix offers gloves by the box (50-300 count) and by the case (4-10 boxes). Bulk pricing is available "
+             "Yes. Healix offers gloves by the box (50–300 count) and by the case (4–10 boxes). Bulk pricing is available "
              "for facilities purchasing 10+ cases."),
         ],
     },
@@ -201,7 +215,7 @@ CAT_SEO = {
              "hydrogel dressings rehydrate dry wounds. Consult your clinician for a wound-specific protocol."),
             ("How often should wound dressings be changed?",
              "Dressing change frequency depends on wound type and exudate level. Lightly exuding wounds may require changes "
-             "every 3-7 days; heavily exuding wounds may require daily changes. Follow manufacturer guidance and clinical protocols."),
+             "every 3–7 days; heavily exuding wounds may require daily changes. Follow manufacturer guidance and clinical protocols."),
             ("What is the difference between sterile and non-sterile wound dressings?",
              "Sterile dressings are individually packaged and required for open wounds, surgical sites, and burns. "
              "Non-sterile dressings are suitable for intact skin or heavily colonized wounds where sterility is not critical."),
@@ -212,7 +226,7 @@ CAT_SEO = {
         "intro": ("Healix is your source for professional respiratory care equipment and disposables. Our catalog includes "
                   "home and portable oxygen concentrators, CPAP and BiPAP machines, ICU and portable ventilators, "
                   "nebulizers, suction catheters, tracheostomy supplies, nasal cannulas, and oxygen masks from brands "
-                  "including ResMed, Philips Respironics, Inogen, DeVilbiss, CAIRE, Drager, Medtronic, and Hamilton Medical."),
+                  "including ResMed, Philips Respironics, Inogen, DeVilbiss, CAIRE, Dräger, Medtronic, and Hamilton Medical."),
         "keywords": ["oxygen concentrator", "CPAP machine", "BiPAP machine", "ventilator", "portable oxygen concentrator",
                      "home oxygen therapy", "respiratory supplies", "nasal cannula", "nebulizer"],
         "faq": [
@@ -227,7 +241,7 @@ CAT_SEO = {
              "(pulse vs continuous), and FAA approval status."),
             ("How do home oxygen concentrators work?",
              "Home oxygen concentrators draw in room air, pass it through a molecular sieve (zeolite), and separate oxygen "
-             "from nitrogen to deliver 90-96% pure oxygen. They run continuously on household current and eliminate the need "
+             "from nitrogen to deliver 90–96% pure oxygen. They run continuously on household current and eliminate the need "
              "for oxygen cylinders."),
             ("Do I need a prescription for a home oxygen concentrator?",
              "Yes. Oxygen concentrators are Class II medical devices that require a prescription from a licensed physician. "
@@ -258,7 +272,7 @@ CAT_SEO = {
         "intro": ("Healix supplies operating rooms and surgical suites with the full spectrum of sterile surgical supplies. "
                   "Our 22,000+ OR products include sutures, surgical gowns, procedure drapes, electrosurgical devices, "
                   "sponges, instrument trays, skin closure products, and hemostatic agents from Kimberly-Clark, Halyard, "
-                  "Cardinal Health, Medline, Ethicon, and Molnlycke."),
+                  "Cardinal Health, Medline, Ethicon, and Mölnlycke."),
         "keywords": ["surgical supplies", "OR supplies", "sutures", "surgical drapes", "surgical gowns",
                      "electrosurgical", "hemostatic agents", "surgical instruments"],
         "faq": [
@@ -300,7 +314,7 @@ CAT_SEO = {
              "Surgical masks are fluid-resistant barriers that protect against droplets but do not provide the same "
              "level of airborne particle filtration. N95s require a fit test for proper protection."),
             ("Are KN95 masks equivalent to N95?",
-             "KN95 masks meet Chinese GB2626 standards and are designed to filter 95%+ of particles, but they are not "
+             "KN95 masks meet Chinese GB2626 standards and are designed to filter ≥95% of particles, but they are not "
              "NIOSH-certified. For healthcare settings, NIOSH-approved N95 respirators are the required standard."),
         ],
     },
@@ -329,8 +343,8 @@ CAT_SEO = {
                      "walking boot", "rehabilitation supplies", "cervical collar"],
         "faq": [
             ("What compression level is recommended for DVT prevention?",
-             "For DVT prophylaxis, graduated compression stockings of 15-20 mmHg or 20-30 mmHg are commonly used. "
-             "Anti-embolism stockings (8-18 mmHg) are used for non-ambulatory patients. Always confirm with physician "
+             "For DVT prophylaxis, graduated compression stockings of 15–20 mmHg or 20–30 mmHg are commonly used. "
+             "Anti-embolism stockings (8–18 mmHg) are used for non-ambulatory patients. Always confirm with physician "
              "guidance for specific patient populations."),
         ],
     },
@@ -368,7 +382,7 @@ CAT_SEO = {
         "headline": "Medical Nutrition — Enteral Formulas, Oral Supplements & Feeding Supplies",
         "intro": ("Healix stocks clinical nutrition products for patients requiring supplemental or complete nutritional "
                   "support. Our catalog includes tube feeding formulas, oral nutritional supplements, enteral feeding "
-                  "pumps and sets, and thickening agents from Abbott (Ensure, Jevity), Nestle Health Science "
+                  "pumps and sets, and thickening agents from Abbott (Ensure, Jevity), Nestlé Health Science "
                   "(Peptamen), Kate Farms, and Nestle Nutren."),
         "keywords": ["enteral nutrition", "tube feeding", "oral supplements", "Ensure", "Jevity",
                      "enteral formula", "medical nutrition"],
@@ -453,8 +467,8 @@ CAT_SEO = {
              "from the pouch, allowing pouch changes without removing the barrier — beneficial for skin integrity "
              "and convenience for active patients."),
             ("How often should an ileostomy pouch be changed?",
-             "One-piece pouches are typically changed every 1-3 days. Two-piece system barriers can last 3-5 days "
-             "with pouch changes as needed (usually every 1-2 days). Change frequency depends on the seal integrity, "
+             "One-piece pouches are typically changed every 1–3 days. Two-piece system barriers can last 3–5 days "
+             "with pouch changes as needed (usually every 1–2 days). Change frequency depends on the seal integrity, "
              "skin condition, and output characteristics."),
             ("What brands of ileostomy supplies does Healix carry?",
              "Healix carries products from all major ostomy manufacturers including Coloplast (SenSura Mio, Assura, Brava), "
@@ -481,7 +495,7 @@ BRAND_SEO = {
     "Ansell": "Ansell is a global leader in protection solutions for healthcare, specializing in surgical gloves, exam gloves, and specialty protective products.",
     "Cardinal Health": "Cardinal Health is a global healthcare services company providing pharmaceutical and medical supply distribution, manufacturing, and consulting services.",
     "Medtronic": "Medtronic is the world's largest medical device company, manufacturing products across cardiac, neurological, diabetes, and surgical care specialties.",
-    "Drager": "Drager is a leading international company in the fields of medical and safety technology, known for anesthesia workstations, ventilators, and patient monitoring.",
+    "Dräger": "Dräger is a leading international company in the fields of medical and safety technology, known for anesthesia workstations, ventilators, and patient monitoring.",
     "Hamilton Medical": "Hamilton Medical is a Swiss medical device company specializing in intelligent ventilation solutions for ICU and transport settings.",
     "Dynarex": "Dynarex Corporation is a leading manufacturer of disposable medical products serving hospitals, nursing homes, physicians, and consumers.",
     "McKesson": "McKesson Corporation is a healthcare distribution company providing pharmaceutical, medical supply distribution, and health information technology.",
@@ -709,6 +723,7 @@ def category_page(cat_slug, sub_slug=None):
     total, preview_rows = _query(category=cat, subcategory=sub or "", limit=24)
     preview = [_summary(r) for r in preview_rows]
 
+    # Top brands in this category (SQL GROUP BY — no full scan needed)
     top_brand_rows = get_db().execute(
         "SELECT brand, COUNT(*) as cnt FROM products "
         "WHERE category = ? AND brand != '' GROUP BY brand ORDER BY cnt DESC LIMIT 8",
@@ -998,6 +1013,65 @@ def category_image(cat_slug, n):
 def proxy_image():
     """Legacy image proxy — kept for URL compatibility."""
     return Response("", status=404)
+
+@app.route("/api/inquiry", methods=["POST"])
+def submit_inquiry():
+    data  = request.get_json(silent=True) or {}
+    name  = (data.get("customer_name") or "").strip()
+    phone = (data.get("phone")         or "").strip()
+    email = (data.get("email")         or "").strip()
+    if not name or not phone or not email:
+        return jsonify({"error": "Name, phone, and email are required"}), 400
+    db = get_db()
+    db.execute(
+        """INSERT INTO inquiries
+           (product_id, product_name, brand, customer_name, phone, email, message)
+           VALUES (?,?,?,?,?,?,?)""",
+        [data.get("product_id",""), data.get("product_name",""), data.get("brand",""),
+         name, phone, email, (data.get("message") or "").strip()]
+    )
+    db.commit()
+    try:
+        _notify_inquiry(data)
+    except Exception as e:
+        log.warning("Inquiry notification failed: %s", e)
+    return jsonify({"success": True})
+
+def _notify_inquiry(data):
+    """Send email notification for a new bulk pricing inquiry."""
+    smtp_host = os.getenv("SMTP_HOST", "")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER", "")
+    smtp_pass = os.getenv("SMTP_PASS", "")
+    to_email  = os.getenv("CONTACT_EMAIL", "newyorkoxygensupply@gmail.com")
+    if not smtp_host or not smtp_user or not smtp_pass:
+        log.info("SMTP not configured — inquiry saved to DB only.")
+        return
+    import smtplib
+    from email.mime.text import MIMEText
+    from email.mime.multipart import MIMEMultipart
+    subject = f"New Bulk Pricing Inquiry — {data.get('product_name','(unknown)')}"
+    body = (
+        f"New bulk pricing inquiry received:\n\n"
+        f"Product:  {data.get('product_name','')}\n"
+        f"Brand:    {data.get('brand','')}\n"
+        f"SKU/ID:   {data.get('product_id','')}\n\n"
+        f"Customer: {data.get('customer_name','')}\n"
+        f"Phone:    {data.get('phone','')}\n"
+        f"Email:    {data.get('email','')}\n\n"
+        f"Notes:\n{data.get('message','(none)')}\n"
+    )
+    msg = MIMEMultipart()
+    msg["From"]    = smtp_user
+    msg["To"]      = to_email
+    msg["Subject"] = subject
+    msg.attach(MIMEText(body, "plain"))
+    with smtplib.SMTP(smtp_host, smtp_port) as s:
+        s.ehlo()
+        s.starttls()
+        s.login(smtp_user, smtp_pass)
+        s.sendmail(smtp_user, to_email, msg.as_string())
+    log.info("Inquiry notification sent to %s", to_email)
 
 # ── robots.txt ─────────────────────────────────────────────────────────────────
 @app.route("/robots.txt")

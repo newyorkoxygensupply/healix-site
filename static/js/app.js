@@ -1,4 +1,4 @@
-/* Healix — Frontend App */
+/* Healix — Frontend App v6 */
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
@@ -249,7 +249,14 @@ function bindEvents() {
   // Modal close
   $('modalClose').addEventListener('click', closeModal);
   modalOverlay.addEventListener('click', e => { if (e.target === modalOverlay) closeModal(); });
-  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') {
+      closeModal();
+      closeInquiry();
+    }
+  });
+  // Inquiry overlay background click
+  $('inquiryOverlay').addEventListener('click', e => { if (e.target === $('inquiryOverlay')) closeInquiry(); });
 }
 
 // ── Search ────────────────────────────────────────────────────────────────────
@@ -449,7 +456,7 @@ function renderProducts(products) {
               ${escHtml(p.price_each)}
               <small>${escHtml(p.quantity_per_unit)} / ${escHtml(p.unit_of_measure)}</small>
             </div>
-            <button class="card-add" onclick="addToCart(event,'${p.product_id}','${escHtml(p.product_name)}')" title="Add to cart">+</button>
+            <button class="card-bulk-btn" onclick="openInquiry(event,'${p.product_id}','${escHtml(p.product_name)}','${escHtml(p.brand)}')">Get Bulk Pricing</button>
           </div>
         </div>
       </div>`;
@@ -606,8 +613,8 @@ async function openProduct(productId) {
         </div>
 
         <div class="modal-actions">
-          <button class="btn-primary" onclick="addToCart(event,'${p.product_id}','${escHtml(p.product_name)}')">
-            + Add to Cart
+          <button class="btn-primary" onclick="openInquiry(event,'${p.product_id}','${escHtml(p.product_name)}','${escHtml(p.brand)}')">
+            Get Bulk Pricing
           </button>
           <button class="btn-secondary" onclick="copyLink('${p.product_id}')">
             Share
@@ -655,10 +662,75 @@ function closeModal() {
   document.body.style.overflow = '';
 }
 
-// ── Cart ──────────────────────────────────────────────────────────────────────
-function addToCart(evt, id, name) {
-  evt.stopPropagation();
-  showToast('✓ Added to cart: ' + name.slice(0, 40) + (name.length > 40 ? '…' : ''));
+// ── Inquiry System ────────────────────────────────────────────────────────────
+let _inquiryProductId   = '';
+let _inquiryProductName = '';
+let _inquiryBrand       = '';
+
+function openInquiry(evt, productId, productName, brand) {
+  if (evt) evt.stopPropagation();
+  _inquiryProductId   = productId;
+  _inquiryProductName = productName;
+  _inquiryBrand       = brand;
+
+  const overlay = $('inquiryOverlay');
+  $('inquiryProductName').textContent = productName;
+  $('inquiryBrand').textContent       = brand;
+  $('inquiryForm').style.display      = '';
+  $('inquirySuccess').style.display   = 'none';
+  $('inquirySubmitBtn').disabled      = false;
+  $('inquirySubmitBtn').textContent   = 'Send Inquiry';
+
+  overlay.classList.add('open');
+  overlay.setAttribute('aria-hidden', 'false');
+  document.body.style.overflow = 'hidden';
+  $('inquiryName').focus();
+}
+
+function closeInquiry() {
+  const overlay = $('inquiryOverlay');
+  overlay.classList.remove('open');
+  overlay.setAttribute('aria-hidden', 'true');
+  document.body.style.overflow = '';
+  $('inquiryForm').reset();
+}
+
+async function submitInquiry(evt) {
+  evt.preventDefault();
+  const btn = $('inquirySubmitBtn');
+  btn.disabled    = true;
+  btn.textContent = 'Sending…';
+
+  const payload = {
+    product_id:    _inquiryProductId,
+    product_name:  _inquiryProductName,
+    brand:         _inquiryBrand,
+    customer_name: $('inquiryName').value.trim(),
+    phone:         $('inquiryPhone').value.trim(),
+    email:         $('inquiryEmail').value.trim(),
+    message:       $('inquiryMessage').value.trim(),
+  };
+
+  try {
+    const res  = await fetch('/api/inquiry', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (res.ok && data.success) {
+      $('inquiryForm').style.display    = 'none';
+      $('inquirySuccess').style.display = '';
+    } else {
+      btn.disabled    = false;
+      btn.textContent = 'Send Inquiry';
+      showToast('Error submitting inquiry. Please try again.');
+    }
+  } catch(e) {
+    btn.disabled    = false;
+    btn.textContent = 'Send Inquiry';
+    showToast('Network error. Please try again.');
+  }
 }
 
 // ── Utils ─────────────────────────────────────────────────────────────────────
@@ -683,7 +755,9 @@ function slugify(str) {
 
 // ── Expose globals ────────────────────────────────────────────────────────────
 window.openProduct  = openProduct;
-window.addToCart    = addToCart;
+window.openInquiry  = openInquiry;
+window.closeInquiry = closeInquiry;
+window.submitInquiry = submitInquiry;
 window.goPage       = goPage;
 window.chipRemove   = chipRemove;
 window.switchImg    = switchImg;
