@@ -407,7 +407,7 @@ BLOGS = [
 <p>GPOs like Vizient, Premier, HealthTrust, and Provista aggregate purchasing power across thousands of member facilities to negotiate contracted pricing. GPO contracts typically offer 10–30% savings vs. list price. However, GPO contracts don't always represent the lowest available market price, particularly for commodity products. Smart procurement teams use GPO contracts as a floor, then negotiate further based on their specific volume.</p>
 
 <h2>Healix as Your Bulk Medical Supply Partner</h2>
-<p>Healix stocks 298,000+ clinical-grade products from 100+ manufacturers at competitive prices. Our <strong>bulk medical supply</strong> pricing tiers are designed for healthcare facilities of all sizes — from single-physician offices to multi-site hospital systems. Contact us for a custom quote on your facility's needs.</p>
+<p>Healix stocks 500,000+ clinical-grade products from 100+ manufacturers at competitive prices. Our <strong>bulk medical supply</strong> pricing tiers are designed for healthcare facilities of all sizes — from single-physician offices to multi-site hospital systems. Contact us for a custom quote on your facility's needs.</p>
 """
   },
   {
@@ -769,7 +769,7 @@ BLOGS = [
 
 <h2>Supply Chain Implications</h2>
 <p>The shift to home-based care is decentralizing medical supply demand. Instead of purchasing in bulk for centralized facilities, DME suppliers and home health agencies need flexible distribution models with smaller, more frequent shipments to individual patient homes. This places a premium on supplier reliability, breadth of catalog, and order fulfillment speed.</p>
-<p>Healix supports home health agencies and DME suppliers with a 298,000+ product catalog, competitive bulk pricing, and fast fulfillment. <a href="/">Contact us</a> to discuss your program's supply needs.</p>
+<p>Healix supports home health agencies and DME suppliers with a 500,000+ product catalog, competitive bulk pricing, and fast fulfillment. <a href="/">Contact us</a> to discuss your program's supply needs.</p>
 """
   },
   {
@@ -1047,7 +1047,7 @@ BLOGS = [
 
 <h2>The Distributorship Model: Direct vs. Broadline</h2>
 <p>Health systems are reassessing the distributor mix that best serves their needs. While broadline distributors (Medline, Cardinal Health, Owens &amp; Minor) offer single-invoice simplicity, specialized distributors like Healix offer deeper catalog depth in specific categories (respiratory, ostomy, wound care), more competitive pricing on clinical-grade supplies, and personalized service for facilities with specific clinical program needs.</p>
-<p>Healix serves hospitals, clinics, DME suppliers, and home health agencies with 298,000+ products, bulk pricing, and responsive account management. <a href="/">Contact us</a> to discuss how we can support your supply chain strategy.</p>
+<p>Healix serves hospitals, clinics, DME suppliers, and home health agencies with 500,000+ products, bulk pricing, and responsive account management. <a href="/">Contact us</a> to discuss how we can support your supply chain strategy.</p>
 """
   },
   {
