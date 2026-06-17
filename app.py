@@ -604,6 +604,75 @@ def google_verification():
         mimetype="text/html"
     )
 
+# ── robots.txt ─────────────────────────────────────────────────────────────────
+@app.route("/robots.txt")
+def robots_txt():
+    content = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /api/\n"
+        f"Sitemap: {SITE_URL}/sitemap.xml\n"
+        f"Sitemap: {SITE_URL}/sitemap-products.xml\n"
+    )
+    resp = Response(content, mimetype="text/plain")
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
+# ── sitemap.xml (index + categories/brands) ───────────────────────────────────
+@app.route("/sitemap.xml")
+def sitemap_index():
+    urls = [
+        {"loc": SITE_URL + "/",              "priority": "1.0", "changefreq": "daily"},
+        {"loc": SITE_URL + "/brands",        "priority": "0.7", "changefreq": "weekly"},
+    ]
+    # All category pages
+    for cat, subs in CATEGORIES.items():
+        cat_s = slugify(cat)
+        urls.append({"loc": f"{SITE_URL}/c/{cat_s}", "priority": "0.9", "changefreq": "weekly"})
+        for sub in subs:
+            urls.append({"loc": f"{SITE_URL}/c/{cat_s}/{slugify(sub)}", "priority": "0.8", "changefreq": "weekly"})
+    # All brand pages
+    for brand in BRANDS:
+        urls.append({"loc": f"{SITE_URL}/brand/{slugify(brand)}", "priority": "0.7", "changefreq": "weekly"})
+
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for u in urls:
+        lines.append("  <url>")
+        lines.append(f'    <loc>{u["loc"]}</loc>')
+        lines.append(f'    <changefreq>{u["changefreq"]}</changefreq>')
+        lines.append(f'    <priority>{u["priority"]}</priority>')
+        lines.append("  </url>")
+    lines.append("</urlset>")
+
+    resp = Response("\n".join(lines), mimetype="application/xml")
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
+
+# ── sitemap-products.xml (top products for crawlability) ──────────────────────
+@app.route("/sitemap-products.xml")
+def sitemap_products():
+    db = get_db()
+    # Sample top 5000 products (enough for Google to discover the catalog shape)
+    rows = db.execute(
+        "SELECT product_id, product_name FROM products ORDER BY rowid ASC LIMIT 5000"
+    ).fetchall()
+
+    lines = ['<?xml version="1.0" encoding="UTF-8"?>',
+             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
+    for r in rows:
+        loc = f"{SITE_URL}/p/{r['product_id']}/{slugify(r['product_name'])}"
+        lines.append("  <url>")
+        lines.append(f"    <loc>{loc}</loc>")
+        lines.append("    <changefreq>monthly</changefreq>")
+        lines.append("    <priority>0.6</priority>")
+        lines.append("  </url>")
+    lines.append("</urlset>")
+
+    resp = Response("\n".join(lines), mimetype="application/xml")
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
+
 # ── Main page ──────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
@@ -689,11 +758,7 @@ def product_page(product_id, slug=None):
     breadcrumbs.append({"name":p["product_name"],
                         "url":f"{SITE_URL}/p/{product_id}/{canonical_slug}"})
 
-    avail_schema = ("http://schema.org/InStock"
-                    if p.get("availability") == "In Stock"
-                    else "http://schema.org/LimitedAvailability"
-                    if "Limited" in p.get("availability","")
-                    else "http://schema.org/OutOfStock")
+    avail_schema = "http://schema.org/InStock"
 
     brand_desc = BRAND_SEO.get(p.get("brand",""), "")
     brand_slug = slugify(p.get("brand",""))

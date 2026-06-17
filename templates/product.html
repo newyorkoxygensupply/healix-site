@@ -107,8 +107,8 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap">
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
-<link rel="preload" href="/static/css/main.css?v=3" as="style">
-<link rel="stylesheet" href="/static/css/main.css?v=3">
+<link rel="preload" href="/static/css/main.css?v=5" as="style">
+<link rel="stylesheet" href="/static/css/main.css?v=5">
 <style>
 .product-page{max-width:1100px;margin:32px auto;padding:0 20px}
 .breadcrumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--ink3);margin-bottom:24px}
@@ -149,25 +149,54 @@ h1.product-title{font-family:var(--font-display);font-size:26px;line-height:1.3;
 </head>
 <body>
 
+<!-- ── Topbar ─────────────────────────────────────────────────────────────── -->
+<div class="topbar" role="complementary" aria-label="Contact information">
+  <div class="topbar-inner">
+    <div class="topbar-left">
+      <span class="topbar-item">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        New York, NY
+      </span>
+    </div>
+    <div class="topbar-right">
+      <a href="mailto:newyorkoxygensupply@gmail.com" class="topbar-link">newyorkoxygensupply@gmail.com</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <header class="header" role="banner">
   <div class="header-inner">
     <a class="logo" href="/" aria-label="{{ site_name }} — Home">
-
-            <div class="logo-icon" aria-hidden="true">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
       </div>
-      <span class="logo-text">{{ site_name }}</span>
+      <div class="logo-text">
+        <span class="logo-name">{{ site_name }}</span>
+        <span class="logo-sub">Medical Supply</span>
+      </div>
     </a>
     <div class="header-search" role="search">
-      <form action="/" method="get">
-        <label for="searchInput" class="sr-only">Search medical supplies</label>
-        <input id="searchInput" type="search" name="q"
-               placeholder="Search 298,000 medical supplies…"
-               autocomplete="off" aria-label="Search products">
-        <button type="submit" aria-label="Submit search">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-        </button>
-      </form>
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <label for="searchInput" class="sr-only">Search medical supplies</label>
+      <input id="searchInput" type="search" name="q"
+             placeholder="Search 298,000+ medical supplies…"
+             autocomplete="off" aria-label="Search products">
+      <button id="searchBtn" class="search-btn" aria-label="Submit search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Search
+      </button>
+    </div>
+    <div class="header-right">
+      <a href="mailto:newyorkoxygensupply@gmail.com" class="header-phone" aria-label="Contact us">
+        <div class="header-phone-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        </div>
+        <div class="header-phone-text">
+          <span class="header-phone-label">Bulk Inquiries</span>
+          <span class="header-phone-num">Contact Us</span>
+        </div>
+      </a>
     </div>
   </div>
 </header>
@@ -192,10 +221,10 @@ h1.product-title{font-family:var(--font-display);font-size:26px;line-height:1.3;
     <div class="product-gallery">
       <div class="main-img" id="mainImgWrap">
         <img id="mainImg"
-             src="{{ p.image_url_1 or '/api/catimg/' + (p.category|slugify) + '/0' }}"
+             src="{{ p.image_url_1 or '' }}"
              alt="{{ p.product_name }}"
              width="600" height="600"
-             onerror="this.onerror=null;this.src='/api/catimg/{{ p.category|slugify }}/0'">
+             onerror="this.style.display='none'">
       </div>
       <div class="thumbs" id="thumbs">
         {% for k in ['image_url_1','image_url_2','image_url_3','image_url_4'] %}
@@ -239,8 +268,8 @@ h1.product-title{font-family:var(--font-display);font-size:26px;line-height:1.3;
         {{ p.availability }}
       </div>
 
-      <button class="add-to-cart" onclick="alert('Add to cart — connect your cart system here')">
-        + Add to Cart
+      <button class="add-to-cart" onclick="openProductInquiry({{ p.product_id|tojson }}, {{ p.product_name|tojson }}, {{ p.brand|tojson }})">
+        Get Bulk Pricing
       </button>
 
       {% if p.description %}
@@ -276,9 +305,9 @@ h1.product-title{font-family:var(--font-display);font-size:26px;line-height:1.3;
       {% for sp in similar %}
       <a href="{{ sp.url }}" class="product-card" style="text-decoration:none;color:inherit">
         <div class="card-img">
-          <img src="{{ sp.image_url_1 or '/api/catimg/' + (sp.category|slugify) + '/0' }}" alt="{{ sp.product_name }}"
+          <img src="{{ sp.image_url_1 }}" alt="{{ sp.product_name }}"
                width="200" height="200" loading="lazy"
-               onerror="this.onerror=null;this.src='/api/catimg/{{ sp.category|slugify }}/0'">
+               onerror="this.style.display='none'">
         </div>
         <div class="card-body">
           <div class="card-brand">{{ sp.brand }}</div>
@@ -336,8 +365,113 @@ h1.product-title{font-family:var(--font-display);font-size:26px;line-height:1.3;
 
 </div>
 
+<!-- ── Inquiry Modal ──────────────────────────────────────────────────────── -->
+<div class="inquiry-overlay" id="inquiryOverlay" role="dialog" aria-modal="true" aria-label="Bulk pricing inquiry" style="display:none">
+  <div class="inquiry-modal">
+    <button class="inquiry-close" onclick="closeInquiry()" aria-label="Close inquiry form">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg>
+    </button>
+    <div class="inquiry-header">
+      <div class="inquiry-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M20 7H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2Z"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+      </div>
+      <div>
+        <h2 class="inquiry-title">Get Bulk Pricing</h2>
+        <p class="inquiry-subtitle" id="inquiryProductName"></p>
+      </div>
+    </div>
+    <form class="inquiry-form" id="inquiryForm" novalidate>
+      <input type="hidden" id="inquiryProductId">
+      <input type="hidden" id="inquiryProductBrand">
+      <div class="form-group">
+        <label class="form-label" for="inquiryName">Full Name <span class="req">*</span></label>
+        <input class="form-input" id="inquiryName" type="text" placeholder="John Smith" required autocomplete="name">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inquiryPhone">Phone Number <span class="req">*</span></label>
+        <input class="form-input" id="inquiryPhone" type="tel" placeholder="(555) 555-5555" required autocomplete="tel">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inquiryEmail">Email Address <span class="req">*</span></label>
+        <input class="form-input" id="inquiryEmail" type="email" placeholder="john@hospital.com" required autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="inquiryMessage">Additional Notes</label>
+        <textarea class="form-textarea" id="inquiryMessage" placeholder="Quantity needed, delivery timeline, special requirements…"></textarea>
+      </div>
+      <button class="inquiry-submit" id="inquirySubmitBtn" type="submit">Send Inquiry</button>
+    </form>
+    <div class="inquiry-success" id="inquirySuccess" style="display:none">
+      <div class="inquiry-success-icon">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <h3>Inquiry Received!</h3>
+      <p>We'll contact you shortly with bulk pricing details for the product you selected.</p>
+      <button class="inquiry-success-close" onclick="closeInquiry()">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+<footer class="footer" role="contentinfo">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a class="logo" href="/" aria-label="{{ site_name }} — Home">
+        <div class="logo-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">{{ site_name }}</span>
+          <span class="logo-sub">Medical Supply</span>
+        </div>
+      </a>
+      <p class="footer-desc">Your trusted B2B partner for clinical-grade medical supplies. 298,000+ products from 100+ leading brands, with bulk pricing for healthcare facilities of all sizes.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Categories</h4>
+      <div class="footer-links">
+        <a href="/c/gloves">Gloves</a>
+        <a href="/c/wound-care">Wound Care</a>
+        <a href="/c/respiratory">Respiratory Equipment</a>
+        <a href="/c/urology-ostomy">Urology &amp; Ostomy</a>
+        <a href="/c/ppe">PPE</a>
+        <a href="/c/diagnostic-equipment">Diagnostic Equipment</a>
+        <a href="/c/incontinence">Incontinence</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Top Brands</h4>
+      <div class="footer-links">
+        <a href="/brand/resmed">ResMed</a>
+        <a href="/brand/coloplast">Coloplast</a>
+        <a href="/brand/convatec">ConvaTec</a>
+        <a href="/brand/medline">Medline</a>
+        <a href="/brand/3m">3M</a>
+        <a href="/brand/bd">BD</a>
+        <a href="/brands">All Brands →</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <div class="footer-links">
+        <a href="mailto:newyorkoxygensupply@gmail.com">newyorkoxygensupply@gmail.com</a>
+        <a href="/c/respiratory/home-oxygen-concentrators">Home Oxygen Concentrators</a>
+        <a href="/c/respiratory/cpap-machines">CPAP Machines</a>
+        <a href="/c/respiratory/bipap-machines">BiPAP Machines</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy">© {{ site_name }} 2025. All rights reserved. Clinical-grade medical supplies for healthcare professionals.</p>
+    <p style="font-size:12px;color:rgba(255,255,255,.35)">All product information is for professional use. Prescription items require valid credentials.</p>
+  </div>
+</footer>
+
 <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
 <script>
+window.SITE_URL  = "{{ site_url }}";
+window.SITE_NAME = "{{ site_name }}";
+
 function switchThumb(el, url) {
   document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
   el.classList.add('active');
@@ -345,6 +479,70 @@ function switchThumb(el, url) {
   img.style.display = '';
   img.src = url;
 }
+
+function openProductInquiry(pid, pname, brand) {
+  document.getElementById('inquiryProductId').value    = pid   || '';
+  document.getElementById('inquiryProductBrand').value = brand || '';
+  document.getElementById('inquiryProductName').textContent = pname || '';
+  document.getElementById('inquiryForm').style.display    = '';
+  document.getElementById('inquirySuccess').style.display = 'none';
+  document.getElementById('inquiryOverlay').style.display = 'flex';
+  document.body.style.overflow = 'hidden';
+  document.getElementById('inquiryName').focus();
+}
+
+function closeInquiry() {
+  document.getElementById('inquiryOverlay').style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+document.getElementById('inquiryOverlay').addEventListener('click', function(e) {
+  if (e.target === this) closeInquiry();
+});
+
+document.getElementById('inquiryForm').addEventListener('submit', async function(e) {
+  e.preventDefault();
+  const btn = document.getElementById('inquirySubmitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  try {
+    const res = await fetch('/api/inquiry', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        product_id:    document.getElementById('inquiryProductId').value,
+        product_name:  document.getElementById('inquiryProductName').textContent,
+        brand:         document.getElementById('inquiryProductBrand').value,
+        customer_name: document.getElementById('inquiryName').value,
+        phone:         document.getElementById('inquiryPhone').value,
+        email:         document.getElementById('inquiryEmail').value,
+        message:       document.getElementById('inquiryMessage').value,
+      })
+    });
+    if (res.ok) {
+      document.getElementById('inquiryForm').style.display    = 'none';
+      document.getElementById('inquirySuccess').style.display = '';
+    } else {
+      throw new Error('Server error');
+    }
+  } catch(err) {
+    alert('There was a problem submitting your inquiry. Please email us directly.');
+    btn.disabled = false;
+    btn.textContent = 'Send Inquiry';
+  }
+});
+
+// Search redirect
+document.getElementById('searchBtn').addEventListener('click', function() {
+  const q = document.getElementById('searchInput').value.trim();
+  if (q) window.location.href = '/?q=' + encodeURIComponent(q);
+});
+document.getElementById('searchInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') {
+    const q = this.value.trim();
+    if (q) window.location.href = '/?q=' + encodeURIComponent(q);
+  }
+});
 </script>
 </body>
 </html>

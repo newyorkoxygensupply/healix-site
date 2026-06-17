@@ -51,7 +51,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/css/main.css?v=3">
+<link rel="stylesheet" href="/static/css/main.css?v=5">
 <style>
 .brand-page{max-width:1200px;margin:0 auto;padding:32px 20px}
 .breadcrumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--gray-400);margin-bottom:24px}
@@ -78,17 +78,53 @@ h2.section-title{font-family:var(--font-display);font-size:24px;letter-spacing:-
 </style>
 </head>
 <body>
+
+<!-- ── Topbar ─────────────────────────────────────────────────────────────── -->
+<div class="topbar" role="complementary" aria-label="Contact information">
+  <div class="topbar-inner">
+    <div class="topbar-left">
+      <span class="topbar-item">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        New York, NY
+      </span>
+    </div>
+    <div class="topbar-right">
+      <a href="mailto:newyorkoxygensupply@gmail.com" class="topbar-link">newyorkoxygensupply@gmail.com</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
 <header class="header" role="banner">
   <div class="header-inner">
     <a class="logo" href="/" aria-label="{{ site_name }} — Home">
-      <div class="logo-icon" aria-hidden="true"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
-      <span class="logo-text">{{ site_name }}</span>
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-name">{{ site_name }}</span>
+        <span class="logo-sub">Medical Supply</span>
+      </div>
     </a>
     <div class="header-search" role="search">
-      <form action="/" method="get">
-        <input type="search" name="q" placeholder="Search {{ total|format_thousands }} {{ brand }} products…" autocomplete="off">
-        <button type="submit" aria-label="Search"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></button>
-      </form>
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <label for="brandSearch" class="sr-only">Search {{ brand }} products</label>
+      <input id="brandSearch" type="search" name="q" placeholder="Search {{ total|format_thousands }} {{ brand }} products…" autocomplete="off">
+      <button id="brandSearchBtn" class="search-btn" aria-label="Search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Search
+      </button>
+    </div>
+    <div class="header-right">
+      <a href="mailto:newyorkoxygensupply@gmail.com" class="header-phone" aria-label="Contact us">
+        <div class="header-phone-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+        </div>
+        <div class="header-phone-text">
+          <span class="header-phone-label">Bulk Inquiries</span>
+          <span class="header-phone-num">Contact Us</span>
+        </div>
+      </a>
     </div>
   </div>
 </header>
@@ -125,7 +161,7 @@ h2.section-title{font-family:var(--font-display);font-size:24px;letter-spacing:-
     {% for p in products %}
     <a href="{{ p.url }}" class="product-card" style="text-decoration:none;color:inherit">
       <div class="card-img">
-        <img src="{{ p.image_url_1 or '/api/catimg/' + (p.category|slugify) + '/0' }}" alt="{{ p.product_name }}" width="220" height="220" loading="lazy" onerror="this.onerror=null;this.src='/api/catimg/{{ p.category|slugify }}/0'">
+        <img src="{{ p.image_url_1 }}" alt="{{ p.product_name }}" width="220" height="220" loading="lazy" onerror="this.style.display='none'">
         <span class="card-badge {% if p.availability == 'In Stock' %}badge-stock{% elif 'Limited' in p.availability %}badge-low{% else %}badge-out{% endif %}">
           {% if p.availability == 'In Stock' %}In Stock{% elif 'Limited' in p.availability %}Limited{% else %}Backorder{% endif %}
         </span>
@@ -156,5 +192,80 @@ h2.section-title{font-family:var(--font-display);font-size:24px;letter-spacing:-
 </div>
 
 <style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+<footer class="footer" role="contentinfo">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a class="logo" href="/" aria-label="{{ site_name }} — Home">
+        <div class="logo-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">{{ site_name }}</span>
+          <span class="logo-sub">Medical Supply</span>
+        </div>
+      </a>
+      <p class="footer-desc">Your trusted B2B partner for clinical-grade medical supplies. 298,000+ products from 100+ leading brands, with bulk pricing for healthcare facilities of all sizes.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Categories</h4>
+      <div class="footer-links">
+        <a href="/c/gloves">Gloves</a>
+        <a href="/c/wound-care">Wound Care</a>
+        <a href="/c/respiratory">Respiratory Equipment</a>
+        <a href="/c/urology-ostomy">Urology &amp; Ostomy</a>
+        <a href="/c/ppe">PPE</a>
+        <a href="/c/diagnostic-equipment">Diagnostic Equipment</a>
+        <a href="/c/incontinence">Incontinence</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Top Brands</h4>
+      <div class="footer-links">
+        <a href="/brand/resmed">ResMed</a>
+        <a href="/brand/coloplast">Coloplast</a>
+        <a href="/brand/convatec">ConvaTec</a>
+        <a href="/brand/medline">Medline</a>
+        <a href="/brand/3m">3M</a>
+        <a href="/brand/bd">BD</a>
+        <a href="/brands">All Brands →</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <div class="footer-links">
+        <a href="mailto:newyorkoxygensupply@gmail.com">newyorkoxygensupply@gmail.com</a>
+        <a href="/c/respiratory/home-oxygen-concentrators">Home Oxygen Concentrators</a>
+        <a href="/c/respiratory/cpap-machines">CPAP Machines</a>
+        <a href="/c/respiratory/bipap-machines">BiPAP Machines</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy">© {{ site_name }} 2025. All rights reserved. Clinical-grade medical supplies for healthcare professionals.</p>
+    <p style="font-size:12px;color:rgba(255,255,255,.35)">All product information is for professional use. Prescription items require valid credentials.</p>
+  </div>
+</footer>
+
+<script>
+window.SITE_URL = "{{ site_url }}";
+var bsBtn = document.getElementById('brandSearchBtn');
+var bsInput = document.getElementById('brandSearch');
+if (bsBtn) {
+  bsBtn.addEventListener('click', function() {
+    var q = bsInput.value.trim();
+    window.location.href = q ? '/?q=' + encodeURIComponent(q) : '/';
+  });
+}
+if (bsInput) {
+  bsInput.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') {
+      var q = this.value.trim();
+      window.location.href = q ? '/?q=' + encodeURIComponent(q) : '/';
+    }
+  });
+}
+</script>
 </body>
 </html>
