@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+<meta name="description" content="{{ description }}">
+<link rel="canonical" href="{{ canonical }}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ description }}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:site_name" content="{{ site_name }}">
+<meta property="og:image" content="{{ og_image }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ description }}">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "LocalBusiness",
+      "name": {{ site_name|tojson }},
+      "description": {{ description|tojson }},
+      "url": {{ site_url|tojson }},
+      "telephone": "+18885856510",
+      "email": "newyorkoxygensupply@gmail.com",
+      "areaServed": {
+        "@type": "City",
+        "name": {{ city.city|tojson }},
+        "containedInPlace": {"@type":"State","name":{{ city.state|tojson }}}
+      },
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "Medical Supplies",
+        "numberOfItems": {{ total }}
+      }
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {% for b in breadcrumbs %}
+        {"@type":"ListItem","position":{{ loop.index }},"name":{{ b.name|tojson }},"item":{{ b.url|tojson }}}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }
+  ]
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css?v=6">
+<style>
+.city-page{max-width:1200px;margin:0 auto;padding:32px 20px}
+.breadcrumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--gray-400);margin-bottom:24px}
+.breadcrumb a{color:var(--cobalt);text-decoration:none}.breadcrumb a:hover{text-decoration:underline}
+.city-hero{background:var(--navy);color:var(--white);border-radius:var(--r-xl);padding:48px 40px;margin-bottom:36px;position:relative;overflow:hidden}
+.city-hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 70% 80% at 90% 50%,rgba(16,185,129,.12) 0%,transparent 60%)}
+.city-hero-eyebrow{font-size:12px;font-weight:600;text-transform:uppercase;letter-spacing:.1em;color:rgba(16,185,129,.9);margin-bottom:10px;position:relative}
+.city-hero h1{font-family:var(--font-display);font-size:36px;letter-spacing:-0.03em;line-height:1.2;margin-bottom:14px;position:relative}
+.city-hero p{font-size:15px;opacity:.75;max-width:560px;line-height:1.7;position:relative;margin-bottom:24px}
+.city-hero-actions{display:flex;gap:12px;flex-wrap:wrap;position:relative}
+.city-btn-primary{background:var(--teal);color:var(--white);padding:13px 24px;border-radius:var(--r-sm);text-decoration:none;font-weight:600;font-size:14px;transition:.15s}
+.city-btn-primary:hover{background:var(--teal-dark,#059669)}
+.city-btn-secondary{background:rgba(255,255,255,.1);color:var(--white);padding:13px 24px;border-radius:var(--r-sm);text-decoration:none;font-weight:600;font-size:14px;border:1px solid rgba(255,255,255,.2);transition:.15s}
+.city-btn-secondary:hover{background:rgba(255,255,255,.18)}
+.city-stats-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:36px}
+.city-stat{background:var(--white);border:1px solid var(--border);border-radius:var(--r-xl);padding:20px 16px;text-align:center}
+.city-stat strong{display:block;font-family:var(--font-display);font-size:26px;letter-spacing:-0.02em;color:var(--navy);margin-bottom:4px}
+.city-stat span{font-size:12px;color:var(--gray-400)}
+.city-section{margin-bottom:40px}
+.city-section-title{font-family:var(--font-display);font-size:26px;letter-spacing:-0.02em;margin-bottom:16px;color:var(--navy)}
+.city-section p{font-size:15px;line-height:1.8;color:var(--gray-700);margin-bottom:14px}
+.city-section ul{margin:0 0 16px 0;padding-left:20px}
+.city-section li{font-size:15px;line-height:1.7;color:var(--gray-700);margin-bottom:6px}
+.city-cats-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:32px}
+.city-cat-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-xl);padding:20px 16px;text-decoration:none;color:inherit;transition:.15s;text-align:center}
+.city-cat-card:hover{border-color:var(--cobalt);box-shadow:0 2px 12px rgba(26,86,219,.08);transform:translateY(-1px)}
+.city-cat-card-name{font-weight:600;font-size:14px;color:var(--navy);margin-bottom:4px}
+.city-cat-card-sub{font-size:12px;color:var(--gray-400)}
+.city-cta-box{background:var(--cobalt-light,#eff6ff);border:1px solid var(--cobalt);border-radius:var(--r-xl);padding:32px;text-align:center;margin-bottom:40px}
+.city-cta-box h2{font-family:var(--font-display);font-size:26px;letter-spacing:-0.02em;color:var(--navy);margin-bottom:10px}
+.city-cta-box p{font-size:15px;color:var(--gray-600);line-height:1.7;margin-bottom:20px;max-width:480px;margin-left:auto;margin-right:auto}
+.city-cta-box .cta-actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
+.city-cta-box a.cta-btn{background:var(--navy);color:var(--white);padding:13px 28px;border-radius:var(--r-sm);text-decoration:none;font-weight:600;font-size:14px;transition:.15s}
+.city-cta-box a.cta-btn:hover{background:var(--cobalt)}
+.city-cta-box a.cta-phone{background:var(--white);color:var(--navy);padding:13px 28px;border-radius:var(--r-sm);text-decoration:none;font-weight:700;font-size:14px;border:1.5px solid var(--border);transition:.15s}
+.city-cta-box a.cta-phone:hover{border-color:var(--cobalt);color:var(--cobalt)}
+.nearby-cities{margin-top:48px;border-top:1px solid var(--border);padding-top:32px}
+.nearby-grid{display:flex;flex-wrap:wrap;gap:8px}
+.nearby-link{background:var(--gray-50);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 14px;font-size:13px;color:var(--gray-600);text-decoration:none;transition:.12s}
+.nearby-link:hover{color:var(--cobalt);border-color:var(--cobalt)}
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ─────────────────────────────────────────────────────────────── -->
+<div class="topbar" role="complementary" aria-label="Contact information">
+  <div class="topbar-inner">
+    <div class="topbar-left">
+      <span class="topbar-item">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        Serving {{ city.city }}, {{ city.abbr }}
+      </span>
+    </div>
+    <div class="topbar-right">
+      <a href="tel:+18885856510" class="topbar-link">(888) 585-6510</a>
+      <a href="mailto:newyorkoxygensupply@gmail.com" class="topbar-link">newyorkoxygensupply@gmail.com</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header class="header" role="banner">
+  <div class="header-inner">
+    <a class="logo" href="/" aria-label="{{ site_name }} — Home">
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-name">{{ site_name }}</span>
+        <span class="logo-sub">Medical Supply</span>
+      </div>
+    </a>
+    <div class="header-search" role="search">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <label for="citySearch" class="sr-only">Search {{ city.city }} medical supplies</label>
+      <input id="citySearch" type="search" name="q" placeholder="Search {{ total|format_thousands }} medical products…" autocomplete="off">
+      <button id="citySearchBtn" class="search-btn" aria-label="Search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Search
+      </button>
+    </div>
+    <div class="header-right">
+      <a href="tel:+18885856510" class="header-phone" aria-label="Call us at (888) 585-6510">
+        <div class="header-phone-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.65 3.44 2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.06 6.06l1.27-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+        </div>
+        <div class="header-phone-text">
+          <span class="header-phone-label">Call Us</span>
+          <span class="header-phone-num">(888) 585-6510</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</header>
+
+<div class="city-page">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    {% for b in breadcrumbs %}
+      {% if not loop.last %}<a href="{{ b.url }}">{{ b.name }}</a><span aria-hidden="true">›</span>
+      {% else %}<span aria-current="page">{{ b.name }}</span>{% endif %}
+    {% endfor %}
+  </nav>
+
+  <div class="city-hero">
+    <div class="city-hero-eyebrow">Medical Supplies · {{ city.city }}, {{ city.state }}</div>
+    <h1>Clinical-Grade Medical Supplies for {{ city.city }}, {{ city.abbr }}</h1>
+    <p>{{ site_name }} delivers {{ total|format_thousands }}+ medical supplies to hospitals, clinics, home health agencies, and private practices throughout {{ city.city }}, {{ city.state }}. Fast shipping, competitive bulk pricing, and 100+ leading brands.</p>
+    <div class="city-hero-actions">
+      <a class="city-btn-primary" href="/">Browse All Products</a>
+      <a class="city-btn-secondary" href="tel:+18885856510">Call (888) 585-6510</a>
+    </div>
+  </div>
+
+  <div class="city-stats-bar">
+    <div class="city-stat"><strong>{{ total|format_thousands }}</strong><span>Products Available</span></div>
+    <div class="city-stat"><strong>{{ brand_count }}</strong><span>Trusted Brands</span></div>
+    <div class="city-stat"><strong>Same Day</strong><span>Order Cutoff Available</span></div>
+    <div class="city-stat"><strong>Bulk</strong><span>Pricing for Facilities</span></div>
+  </div>
+
+  <!-- Top Categories -->
+  <section class="city-section" aria-labelledby="cats-heading">
+    <h2 class="city-section-title" id="cats-heading">Medical Supply Categories Available in {{ city.city }}</h2>
+    <div class="city-cats-grid">
+      {% for cat in top_cats %}
+      <a class="city-cat-card" href="/c/{{ cat|lower|replace(' &amp; ','-')|replace(' & ','-')|replace(' ','-') }}">
+        <div class="city-cat-card-name">{{ cat }}</div>
+        <div class="city-cat-card-sub">Shop →</div>
+      </a>
+      {% endfor %}
+      <a class="city-cat-card" href="/brands">
+        <div class="city-cat-card-name">All Brands</div>
+        <div class="city-cat-card-sub">100+ brands →</div>
+      </a>
+    </div>
+  </section>
+
+  <!-- Local SEO content -->
+  <section class="city-section" aria-labelledby="about-heading">
+    <h2 class="city-section-title" id="about-heading">Serving Healthcare Facilities in {{ city.city }}, {{ city.state }}</h2>
+    <p>{{ site_name }} is a trusted B2B medical supply partner for healthcare organizations throughout {{ city.city }} and the greater {{ city.state }} area. Whether you operate a hospital system, an ambulatory surgery center, a long-term care facility, a home health agency, or a private medical practice, we provide the clinical-grade supplies your staff and patients depend on.</p>
+    <p>Our {{ total|format_thousands }}+ product catalog covers every major clinical category including exam gloves, wound care dressings, home oxygen concentrators, CPAP and BiPAP machines, ostomy and urology supplies, IV and vascular access products, personal protective equipment (PPE), incontinence briefs, diagnostic equipment, and durable medical equipment (DME).</p>
+    <p>Healthcare facilities in {{ city.city }} benefit from our:</p>
+    <ul>
+      <li><strong>Bulk pricing programs</strong> — volume discounts for facilities ordering 10+ cases or establishing standing monthly orders</li>
+      <li><strong>Fast shipping</strong> — most orders to {{ city.city }}, {{ city.abbr }} ship within 1–2 business days</li>
+      <li><strong>100+ trusted brands</strong> — including Medline, 3M, Coloplast, ConvaTec, ResMed, BD, Ansell, Cardinal Health, and more</li>
+      <li><strong>Dedicated customer support</strong> — call (888) 585-6510 to speak with a medical supply specialist</li>
+    </ul>
+  </section>
+
+  <section class="city-section" aria-labelledby="products-heading">
+    <h2 class="city-section-title" id="products-heading">Most-Ordered Medical Supplies in {{ city.city }}</h2>
+    <p>Based on orders from {{ city.state }} healthcare facilities, these categories consistently rank among the most-requested medical supplies in {{ city.city }}:</p>
+    <ul>
+      <li><strong>Nitrile exam gloves</strong> — powder-free, latex-free exam gloves in sizes XS–XL from Ansell, Medline, Cardinal Health, and Dynarex</li>
+      <li><strong>Wound care dressings</strong> — advanced wound dressings including alginate, foam, hydrogel, and antimicrobial products for acute and chronic wound management</li>
+      <li><strong>Home oxygen concentrators</strong> — portable and stationary concentrators from Inogen, ResMed, Philips Respironics, and DeVilbiss for respiratory therapy</li>
+      <li><strong>CPAP and BiPAP machines</strong> — sleep therapy equipment with masks, tubing, and filters for sleep apnea and respiratory insufficiency patients</li>
+      <li><strong>Ostomy supplies</strong> — ileostomy, colostomy, and urostomy pouches, wafers, and accessories from Coloplast, ConvaTec, and Hollister</li>
+      <li><strong>Incontinence products</strong> — adult briefs, protective underwear, underpads, and bladder control pads from Prevail, Tranquility, and Attends</li>
+      <li><strong>PPE and infection prevention</strong> — NIOSH-approved N95 respirators, isolation gowns, surgical masks, and face shields from 3M, Halyard, and Kimberly-Clark</li>
+    </ul>
+  </section>
+
+  <section class="city-section" aria-labelledby="ordering-heading">
+    <h2 class="city-section-title" id="ordering-heading">How to Order Medical Supplies for Delivery to {{ city.city }}</h2>
+    <p>Ordering medical supplies for your {{ city.city }} facility is straightforward:</p>
+    <ol style="padding-left:20px">
+      <li style="font-size:15px;line-height:1.7;color:var(--gray-700);margin-bottom:8px"><strong>Browse our catalog</strong> — use the search bar above or browse by category to find the products you need</li>
+      <li style="font-size:15px;line-height:1.7;color:var(--gray-700);margin-bottom:8px"><strong>Request bulk pricing</strong> — click "Get Bulk Pricing" on any product page and submit your inquiry</li>
+      <li style="font-size:15px;line-height:1.7;color:var(--gray-700);margin-bottom:8px"><strong>Call for immediate assistance</strong> — reach a medical supply specialist at (888) 585-6510, Monday–Friday</li>
+      <li style="font-size:15px;line-height:1.7;color:var(--gray-700);margin-bottom:8px"><strong>Receive your order</strong> — most orders to {{ city.city }}, {{ city.abbr }} are delivered within 1–3 business days</li>
+    </ol>
+    <p>For standing orders, contract pricing, or emergency supply needs in {{ city.city }}, please contact our team directly by phone or email.</p>
+  </section>
+
+  <div class="city-cta-box">
+    <h2>Order Medical Supplies for {{ city.city }}, {{ city.abbr }} Today</h2>
+    <p>Browse {{ total|format_thousands }}+ clinical-grade products and request bulk pricing for your {{ city.city }} healthcare facility.</p>
+    <div class="cta-actions">
+      <a class="cta-btn" href="/">Browse Products</a>
+      <a class="cta-phone" href="tel:+18885856510">(888) 585-6510</a>
+    </div>
+  </div>
+
+  <div class="nearby-cities">
+    <h2 class="city-section-title">Other Cities We Serve in {{ city.state }}</h2>
+    <div class="nearby-grid">
+      <a class="nearby-link" href="/locations">← All Locations</a>
+    </div>
+  </div>
+</div>
+
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+<footer class="footer" role="contentinfo">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a class="logo" href="/" aria-label="{{ site_name }} — Home">
+        <div class="logo-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">{{ site_name }}</span>
+          <span class="logo-sub">Medical Supply</span>
+        </div>
+      </a>
+      <p class="footer-desc">Your trusted B2B partner for clinical-grade medical supplies. 298,000+ products from 100+ leading brands, with bulk pricing for healthcare facilities of all sizes.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Categories</h4>
+      <div class="footer-links">
+        <a href="/c/gloves">Gloves</a>
+        <a href="/c/wound-care">Wound Care</a>
+        <a href="/c/respiratory">Respiratory Equipment</a>
+        <a href="/c/urology-ostomy">Urology &amp; Ostomy</a>
+        <a href="/c/ppe">PPE</a>
+        <a href="/c/diagnostic-equipment">Diagnostic Equipment</a>
+        <a href="/c/incontinence">Incontinence</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Top Brands</h4>
+      <div class="footer-links">
+        <a href="/brand/resmed">ResMed</a>
+        <a href="/brand/coloplast">Coloplast</a>
+        <a href="/brand/convatec">ConvaTec</a>
+        <a href="/brand/medline">Medline</a>
+        <a href="/brand/3m">3M</a>
+        <a href="/brand/bd">BD</a>
+        <a href="/brands">All Brands →</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <div class="footer-links">
+        <a href="tel:+18885856510">(888) 585-6510</a>
+        <a href="mailto:newyorkoxygensupply@gmail.com">newyorkoxygensupply@gmail.com</a>
+        <a href="/blog">Medical Supply Blog</a>
+        <a href="/locations">All Locations</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy">© {{ site_name }} 2025. All rights reserved. Clinical-grade medical supplies for healthcare professionals.</p>
+    <p style="font-size:12px;color:rgba(255,255,255,.35)">All product information is for professional use. Prescription items require valid credentials.</p>
+  </div>
+</footer>
+
+<script>
+window.SITE_URL = "{{ site_url }}";
+var btn = document.getElementById('citySearchBtn');
+var inp = document.getElementById('citySearch');
+if (btn) btn.addEventListener('click', function() {
+  var q = inp.value.trim();
+  window.location.href = q ? '/?q=' + encodeURIComponent(q) : '/';
+});
+if (inp) inp.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { var q = this.value.trim(); window.location.href = q ? '/?q=' + encodeURIComponent(q) : '/'; }
+});
+</script>
+</body>
+</html>

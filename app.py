@@ -3,11 +3,14 @@ Healix — Production Flask backend (Exhaustive SEO Edition) — SQLite build
 """
 import os, re, math, hashlib, logging, json, threading, urllib.parse, urllib.request, urllib.error
 import sqlite3
+from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, render_template, Response, redirect
 from flask_compress import Compress
+from blog_data import BLOGS
+from city_data import CITIES, CITY_BY_SLUG
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 load_dotenv()
@@ -20,6 +23,9 @@ SITE_URL       = os.getenv("SITE_URL", "http://localhost:8080").rstrip("/")
 SITE_NAME      = os.getenv("SITE_NAME", "Healix")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 TODAY          = date.today().isoformat()
+
+# ── Blog data ──────────────────────────────────────────────────────────────────
+BLOG_BY_SLUG = {b["slug"]: b for b in BLOGS}
 
 logging.basicConfig(
     level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
@@ -1181,7 +1187,9 @@ def sitemap_index():
     n_batches = math.ceil(TOTAL / SITEMAP_BATCH)
     sitemaps  = (
         [(f"{SITE_URL}/sitemap-categories.xml", TODAY),
-         (f"{SITE_URL}/sitemap-brands.xml",     TODAY)]
+         (f"{SITE_URL}/sitemap-brands.xml",     TODAY),
+         (f"{SITE_URL}/sitemap-blog.xml",        TODAY),
+         (f"{SITE_URL}/sitemap-cities.xml",      TODAY)]
         + [(f"{SITE_URL}/sitemap-products-{b}.xml", TODAY) for b in range(1, n_batches+1)]
     )
     body  = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -1230,6 +1238,44 @@ def sitemap_brands():
     resp.headers["Cache-Control"] = "public, max-age=3600"
     return resp
 
+@app.route("/sitemap-blog.xml")
+def sitemap_blog():
+    body  = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    body += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    body += (f"  <url><loc>{SITE_URL}/blog</loc>"
+             f"<lastmod>{TODAY}</lastmod>"
+             f"<changefreq>weekly</changefreq>"
+             f"<priority>0.8</priority></url>\n")
+    for post in BLOGS:
+        loc = f"{SITE_URL}/blog/{post['slug']}"
+        body += (f"  <url><loc>{loc}</loc>"
+                 f"<lastmod>{post.get('date', TODAY)}</lastmod>"
+                 f"<changefreq>monthly</changefreq>"
+                 f"<priority>0.7</priority></url>\n")
+    body += "</urlset>"
+    resp = Response(body, mimetype="application/xml")
+    resp.headers["Cache-Control"] = "public, max-age=3600"
+    return resp
+
+@app.route("/sitemap-cities.xml")
+def sitemap_cities():
+    body  = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    body += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+    body += (f"  <url><loc>{SITE_URL}/locations</loc>"
+             f"<lastmod>{TODAY}</lastmod>"
+             f"<changefreq>monthly</changefreq>"
+             f"<priority>0.8</priority></url>\n")
+    for city in CITIES:
+        loc = f"{SITE_URL}/city/{city['slug']}"
+        body += (f"  <url><loc>{loc}</loc>"
+                 f"<lastmod>{TODAY}</lastmod>"
+                 f"<changefreq>monthly</changefreq>"
+                 f"<priority>0.7</priority></url>\n")
+    body += "</urlset>"
+    resp = Response(body, mimetype="application/xml")
+    resp.headers["Cache-Control"] = "public, max-age=86400"
+    return resp
+
 @app.route("/sitemap-products-<int:batch>.xml")
 def sitemap_products(batch):
     start = (batch - 1) * SITEMAP_BATCH
@@ -1252,6 +1298,105 @@ def sitemap_products(batch):
     resp = Response(body, mimetype="application/xml")
     resp.headers["Cache-Control"] = "public, max-age=86400"
     return resp
+
+# ── Blog routes ────────────────────────────────────────────────────────────────
+@app.route("/blog")
+def blog_list():
+    seen = set()
+    blog_categories = []
+    for b in BLOGS:
+        if b["category"] not in seen:
+            seen.add(b["category"])
+            blog_categories.append(b["category"])
+    return render_template("blog_list.html",
+        site_name=SITE_NAME, site_url=SITE_URL,
+        title=f"Medical Supply Blog | Clinical Insights & Industry News | {SITE_NAME}",
+        description=(
+            "Expert articles on medical supply procurement, wound care, respiratory therapy, "
+            "infection prevention, home oxygen therapy, and healthcare industry trends."
+        ),
+        canonical=SITE_URL + "/blog",
+        og_image=SITE_URL + "/static/img/og-default.jpg",
+        blogs=BLOGS,
+        blog_categories=blog_categories,
+    )
+
+@app.route("/blog/<slug>")
+def blog_post(slug):
+    post = BLOG_BY_SLUG.get(slug)
+    if not post:
+        return render_template("404.html", site_name=SITE_NAME, site_url=SITE_URL,
+                               title="Article Not Found"), 404
+    breadcrumbs = [
+        {"name":"Home","url":SITE_URL+"/"},
+        {"name":"Blog","url":SITE_URL+"/blog"},
+        {"name":post["title"],"url":f"{SITE_URL}/blog/{slug}"},
+    ]
+    # Related posts: same category, excluding self
+    related = [b for b in BLOGS if b["category"] == post["category"] and b["slug"] != slug][:3]
+    if len(related) < 3:
+        related += [b for b in BLOGS if b["slug"] != slug and b not in related][:3-len(related)]
+    return render_template("blog_post.html",
+        site_name=SITE_NAME, site_url=SITE_URL,
+        title=f"{post['title']} | {SITE_NAME} Blog",
+        description=post["meta_description"],
+        canonical=f"{SITE_URL}/blog/{slug}",
+        og_image=SITE_URL + "/static/img/og-default.jpg",
+        post=post, breadcrumbs=breadcrumbs, related=related,
+    )
+
+# ── Locations / city routes ─────────────────────────────────────────────────────
+# Group cities by state for the index page
+_CITIES_BY_STATE: dict = defaultdict(list)
+for _c in CITIES:
+    _CITIES_BY_STATE[_c["state"]].append(_c)
+CITIES_BY_STATE = dict(_CITIES_BY_STATE)
+STATES_SORTED = sorted(CITIES_BY_STATE.keys())
+
+@app.route("/locations")
+def locations_index():
+    return render_template("locations.html",
+        site_name=SITE_NAME, site_url=SITE_URL,
+        title=f"Medical Supply Delivery by City | {SITE_NAME} — Serving All 50 States",
+        description=(
+            f"Find {SITE_NAME} medical supply services near you. "
+            "We ship clinical-grade medical supplies to healthcare facilities in every US city. "
+            "Browse your city for local availability and ordering information."
+        ),
+        canonical=SITE_URL + "/locations",
+        og_image=SITE_URL + "/static/img/og-default.jpg",
+        cities_by_state=CITIES_BY_STATE,
+        states=STATES_SORTED,
+        total_cities=len(CITIES),
+    )
+
+@app.route("/city/<city_slug>")
+def city_page(city_slug):
+    city = CITY_BY_SLUG.get(city_slug)
+    if not city:
+        return render_template("404.html", site_name=SITE_NAME, site_url=SITE_URL,
+                               title="City Not Found"), 404
+    # Featured categories for the city page
+    top_cats = list(CATEGORIES.keys())[:8]
+    breadcrumbs = [
+        {"name":"Home","url":SITE_URL+"/"},
+        {"name":"Locations","url":SITE_URL+"/locations"},
+        {"name":f"{city['city']}, {city['abbr']}","url":f"{SITE_URL}/city/{city_slug}"},
+    ]
+    return render_template("city_page.html",
+        site_name=SITE_NAME, site_url=SITE_URL,
+        title=(f"Medical Supplies in {city['city']}, {city['abbr']} | "
+               f"Clinical-Grade Supply Delivery | {SITE_NAME}"),
+        description=(
+            f"Order medical supplies for delivery to {city['city']}, {city['state']}. "
+            f"{TOTAL:,}+ clinical-grade products including gloves, wound care, oxygen concentrators, "
+            f"CPAP machines, ostomy supplies, and PPE. Fast shipping to {city['city']} healthcare facilities."
+        ),
+        canonical=f"{SITE_URL}/city/{city_slug}",
+        og_image=SITE_URL + "/static/img/og-default.jpg",
+        city=city, top_cats=top_cats, total=TOTAL,
+        brand_count=len(BRANDS), breadcrumbs=breadcrumbs,
+    )
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 @app.route("/health")

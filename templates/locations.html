@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ title }}</title>
+<meta name="description" content="{{ description }}">
+<link rel="canonical" href="{{ canonical }}">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ title }}">
+<meta property="og:description" content="{{ description }}">
+<meta property="og:url" content="{{ canonical }}">
+<meta property="og:site_name" content="{{ site_name }}">
+<meta property="og:image" content="{{ og_image }}">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="{{ title }}">
+<meta name="twitter:description" content="{{ description }}">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "url": {{ canonical|tojson }},
+  "name": {{ title|tojson }},
+  "description": {{ description|tojson }},
+  "publisher": {"@type":"Organization","name":{{ site_name|tojson }},"url":{{ site_url|tojson }}}
+}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/static/css/main.css?v=6">
+<style>
+.locations-page{max-width:1200px;margin:0 auto;padding:32px 20px}
+.breadcrumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--gray-400);margin-bottom:24px}
+.breadcrumb a{color:var(--cobalt);text-decoration:none}.breadcrumb a:hover{text-decoration:underline}
+.locations-hero{background:var(--navy);color:var(--white);border-radius:var(--r-xl);padding:48px 40px;margin-bottom:40px;position:relative;overflow:hidden}
+.locations-hero::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 60% 80% at 20% 50%,rgba(16,185,129,.15) 0%,transparent 70%)}
+.locations-hero h1{font-family:var(--font-display);font-size:38px;letter-spacing:-0.03em;margin-bottom:12px;position:relative}
+.locations-hero p{font-size:16px;opacity:.75;max-width:580px;line-height:1.7;position:relative;margin-bottom:20px}
+.locations-stats{display:flex;gap:24px;position:relative;flex-wrap:wrap}
+.loc-stat{background:rgba(255,255,255,.08);border-radius:var(--r-sm);padding:10px 20px;text-align:center}
+.loc-stat strong{display:block;font-family:var(--font-display);font-size:22px}
+.loc-stat span{font-size:12px;opacity:.7}
+.state-search{background:var(--white);border:1px solid var(--border);border-radius:var(--r-xl);padding:20px 24px;margin-bottom:28px;display:flex;gap:12px;align-items:center}
+.state-search input{flex:1;border:1px solid var(--border);border-radius:var(--r-sm);padding:10px 14px;font-size:14px;font-family:inherit}
+.state-search input:focus{outline:none;border-color:var(--cobalt)}
+.state-block{margin-bottom:32px}
+.state-name{font-family:var(--font-display);font-size:22px;letter-spacing:-0.02em;color:var(--navy);margin-bottom:14px;padding-bottom:8px;border-bottom:2px solid var(--border)}
+.city-grid{display:flex;flex-wrap:wrap;gap:8px}
+.city-link{background:var(--gray-50);border:1px solid var(--border);border-radius:var(--r-sm);padding:6px 14px;font-size:13px;color:var(--gray-700);text-decoration:none;transition:.12s}
+.city-link:hover{background:var(--cobalt-light);color:var(--cobalt);border-color:var(--cobalt)}
+.state-tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:28px}
+.state-tab{background:var(--gray-50);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:12px;font-weight:500;color:var(--gray-600);text-decoration:none;transition:.12s}
+.state-tab:hover{background:var(--cobalt-light);color:var(--cobalt);border-color:var(--cobalt)}
+</style>
+</head>
+<body>
+
+<!-- ── Topbar ─────────────────────────────────────────────────────────────── -->
+<div class="topbar" role="complementary" aria-label="Contact information">
+  <div class="topbar-inner">
+    <div class="topbar-left">
+      <span class="topbar-item">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        New York, NY
+      </span>
+    </div>
+    <div class="topbar-right">
+      <a href="tel:+18885856510" class="topbar-link">(888) 585-6510</a>
+      <a href="mailto:newyorkoxygensupply@gmail.com" class="topbar-link">newyorkoxygensupply@gmail.com</a>
+    </div>
+  </div>
+</div>
+
+<!-- ── Header ─────────────────────────────────────────────────────────────── -->
+<header class="header" role="banner">
+  <div class="header-inner">
+    <a class="logo" href="/" aria-label="{{ site_name }} — Home">
+      <div class="logo-mark" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <div class="logo-text">
+        <span class="logo-name">{{ site_name }}</span>
+        <span class="logo-sub">Medical Supply</span>
+      </div>
+    </a>
+    <div class="header-search" role="search">
+      <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <label for="locSearch" class="sr-only">Search products</label>
+      <input id="locSearch" type="search" name="q" placeholder="Search 298,000+ medical products…" autocomplete="off">
+      <button id="locSearchBtn" class="search-btn" aria-label="Search">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        Search
+      </button>
+    </div>
+    <div class="header-right">
+      <a href="tel:+18885856510" class="header-phone" aria-label="Call us at (888) 585-6510">
+        <div class="header-phone-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.65 3.44 2 2 0 0 1 3.62 2h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.06 6.06l1.27-.91a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92Z"/></svg>
+        </div>
+        <div class="header-phone-text">
+          <span class="header-phone-label">Call Us</span>
+          <span class="header-phone-num">(888) 585-6510</span>
+        </div>
+      </a>
+    </div>
+  </div>
+</header>
+
+<div class="locations-page">
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    <a href="/">Home</a><span aria-hidden="true">›</span>
+    <span aria-current="page">Locations</span>
+  </nav>
+
+  <div class="locations-hero">
+    <h1>Medical Supplies Delivered Across the US</h1>
+    <p>{{ site_name }} ships clinical-grade medical supplies to healthcare facilities in every US city. Same-day and next-day shipping options available for most locations.</p>
+    <div class="locations-stats">
+      <div class="loc-stat"><strong>{{ total_cities }}</strong><span>Cities Served</span></div>
+      <div class="loc-stat"><strong>50</strong><span>States</span></div>
+      <div class="loc-stat"><strong>298,000+</strong><span>Products</span></div>
+    </div>
+  </div>
+
+  <div class="state-search">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="cityFilterInput" placeholder="Search for your city…" autocomplete="off">
+  </div>
+
+  <nav class="state-tabs" aria-label="Jump to state">
+    {% for state in states %}
+    <a class="state-tab" href="#state-{{ cities_by_state[state][0].abbr }}">{{ cities_by_state[state][0].abbr }}</a>
+    {% endfor %}
+  </nav>
+
+  <div id="stateList">
+    {% for state in states %}
+    {% set abbr = cities_by_state[state][0].abbr %}
+    <div class="state-block" id="state-{{ abbr }}" data-state="{{ state|lower }}">
+      <h2 class="state-name">{{ state }}</h2>
+      <div class="city-grid">
+        {% for city in cities_by_state[state] %}
+        <a class="city-link" href="/city/{{ city.slug }}" data-city="{{ city.city|lower }}">{{ city.city }}</a>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
+
+<!-- ── Footer ─────────────────────────────────────────────────────────────── -->
+<footer class="footer" role="contentinfo">
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <a class="logo" href="/" aria-label="{{ site_name }} — Home">
+        <div class="logo-mark" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">{{ site_name }}</span>
+          <span class="logo-sub">Medical Supply</span>
+        </div>
+      </a>
+      <p class="footer-desc">Your trusted B2B partner for clinical-grade medical supplies. 298,000+ products from 100+ leading brands, with bulk pricing for healthcare facilities of all sizes.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Categories</h4>
+      <div class="footer-links">
+        <a href="/c/gloves">Gloves</a>
+        <a href="/c/wound-care">Wound Care</a>
+        <a href="/c/respiratory">Respiratory Equipment</a>
+        <a href="/c/urology-ostomy">Urology &amp; Ostomy</a>
+        <a href="/c/ppe">PPE</a>
+        <a href="/c/diagnostic-equipment">Diagnostic Equipment</a>
+        <a href="/c/incontinence">Incontinence</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Resources</h4>
+      <div class="footer-links">
+        <a href="/blog">Medical Supply Blog</a>
+        <a href="/locations">Locations We Serve</a>
+        <a href="/brands">All Brands</a>
+      </div>
+    </div>
+    <div class="footer-col">
+      <h4>Contact</h4>
+      <div class="footer-links">
+        <a href="tel:+18885856510">(888) 585-6510</a>
+        <a href="mailto:newyorkoxygensupply@gmail.com">newyorkoxygensupply@gmail.com</a>
+        <a href="/c/respiratory/home-oxygen-concentrators">Home Oxygen Concentrators</a>
+        <a href="/c/respiratory/cpap-machines">CPAP Machines</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <p class="footer-copy">© {{ site_name }} 2025. All rights reserved. Clinical-grade medical supplies for healthcare professionals.</p>
+    <p style="font-size:12px;color:rgba(255,255,255,.35)">All product information is for professional use. Prescription items require valid credentials.</p>
+  </div>
+</footer>
+
+<script>
+window.SITE_URL = "{{ site_url }}";
+var btn = document.getElementById('locSearchBtn');
+var inp = document.getElementById('locSearch');
+if (btn) btn.addEventListener('click', function() {
+  var q = inp.value.trim();
+  window.location.href = q ? '/?q=' + encodeURIComponent(q) : '/';
+});
+if (inp) inp.addEventListener('keydown', function(e) {
+  if (e.key === 'Enter') { var q = this.value.trim(); window.location.href = q ? '/?q=' + encodeURIComponent(q) : '/'; }
+});
+// City filter
+var cityFilter = document.getElementById('cityFilterInput');
+if (cityFilter) {
+  cityFilter.addEventListener('input', function() {
+    var q = this.value.toLowerCase().trim();
+    document.querySelectorAll('.state-block').forEach(function(block) {
+      var visibleCount = 0;
+      block.querySelectorAll('.city-link').forEach(function(link) {
+        var match = !q || link.dataset.city.includes(q);
+        link.style.display = match ? '' : 'none';
+        if (match) visibleCount++;
+      });
+      block.style.display = visibleCount > 0 ? '' : 'none';
+    });
+  });
+}
+</script>
+</body>
+</html>
