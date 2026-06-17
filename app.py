@@ -596,6 +596,14 @@ def _seo_cat_desc(cat, sub=None, total=0):
     return (f"Shop {total:,} {cat} medical supplies online. {kw_str}. "
             f"Trusted brands, competitive pricing, fast shipping. — {SITE_NAME}")
 
+# ── Google site verification ───────────────────────────────────────────────────
+@app.route("/googlee5995f15af11c811.html")
+def google_verification():
+    return Response(
+        "google-site-verification: googlee5995f15af11c811.html",
+        mimetype="text/html"
+    )
+
 # ── Main page ──────────────────────────────────────────────────────────────────
 @app.route("/")
 def index():
