@@ -138,8 +138,8 @@
       rel="stylesheet">
 
 <!-- Performance: preload critical CSS -->
-<link rel="preload" href="/static/css/main.css?v=5" as="style">
-<link rel="stylesheet" href="/static/css/main.css?v=5">
+<link rel="preload" href="/static/css/main.css?v=6" as="style">
+<link rel="stylesheet" href="/static/css/main.css?v=6">
 </head>
 <body>
 
@@ -202,17 +202,63 @@
 
 <!-- ── Hero ───────────────────────────────────────────────────────────────── -->
 <section class="hero-bar" aria-label="Catalog overview">
+  <div class="hero-glow-r" aria-hidden="true"></div>
   <div class="hero-inner">
+
     <div class="hero-content">
-      <div class="hero-eyebrow">B2B Medical Supply &nbsp;·&nbsp; <span>Bulk Pricing Available</span></div>
+      <div class="hero-eyebrow">
+        B2B Medical Supply
+        <span>&nbsp;·&nbsp; Bulk Pricing Available</span>
+      </div>
+
       <h1>The Medical Supply<br><em>Platform</em></h1>
-      <p>298,000+ products across 20 categories — gloves, wound care, respiratory equipment, ostomy supplies, PPE, and more from the world's leading brands.</p>
+
+      <p>298,000+ clinical-grade products across 20 categories — gloves, wound care, respiratory equipment, ostomy supplies, PPE, diagnostic equipment and more from the world's leading brands.</p>
+
+      <div class="hero-cta">
+        <button class="hero-btn-primary" onclick="document.getElementById('searchInput').focus(); document.getElementById('searchInput').scrollIntoView({behavior:'smooth'})">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Browse Catalog
+        </button>
+        <button class="hero-btn-secondary" onclick="openInquiry()">
+          Get Bulk Pricing
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+        </button>
+      </div>
+
+      <div class="hero-trust" aria-label="Trust indicators">
+        <span class="hero-trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          Clinical-Grade Quality
+        </span>
+        <span class="hero-trust-divider" aria-hidden="true"></span>
+        <span class="hero-trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          100+ Trusted Brands
+        </span>
+        <span class="hero-trust-divider" aria-hidden="true"></span>
+        <span class="hero-trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          Bulk Pricing Available
+        </span>
+      </div>
     </div>
+
     <div class="hero-stats" id="heroStats" aria-label="Catalog statistics">
-      <div class="stat"><strong id="statProducts">298K+</strong>Products</div>
-      <div class="stat"><strong id="statCategories">20</strong>Categories</div>
-      <div class="stat"><strong id="statBrands">—</strong>Brands</div>
+      <div class="stat">
+        <strong id="statProducts">298K+</strong>
+        <span>Products</span>
+      </div>
+      <div class="stat">
+        <strong id="statCategories">20</strong>
+        <span>Categories</span>
+      </div>
+      <div class="stat">
+        <strong id="statBrands">100+</strong>
+        <span>Brands</span>
+      </div>
     </div>
+
   </div>
 </section>
 
