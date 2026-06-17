@@ -556,7 +556,7 @@ def _summary(p: dict) -> dict:
         "sku":               p.get("sku",""),
         "price_each":        p.get("price_each",""),
         "price_case":        p.get("price_case",""),
-        "availability":      p.get("availability",""),
+        "availability":      "In Stock",
         "image_url_1":       _proxy_img(p.get("image_url_1","")),
         "size":              p.get("size",""),
         "color":             p.get("color",""),
@@ -574,10 +574,8 @@ def _seo_product_title(p: dict) -> str:
 def _seo_product_desc(p: dict) -> str:
     desc  = (p.get("description") or "").strip()
     price = p.get("price_each","")
-    avail = p.get("availability","")
     brand = p.get("brand","")
-    base  = f"Buy {p['product_name']} by {brand}. {price}"
-    if avail: base += f" — {avail}."
+    base  = f"Buy {p['product_name']} by {brand}. {price} — In Stock."
     if desc:
         remaining = 155 - len(base) - 1
         if remaining > 30:
