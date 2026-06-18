@@ -193,20 +193,84 @@ function readUrlState() {
   if (p.get('page'))        state.page         = parseInt(p.get('page')) || 1;
 }
 
+// ── Fetch with timeout helper ──────────────────────────────────────────────────
+function fetchWithTimeout(url, opts, ms) {
+  ms = ms || 12000;
+  const ctrl = new AbortController();
+  const tid   = setTimeout(() => ctrl.abort(), ms);
+  return fetch(url, Object.assign({}, opts, {signal: ctrl.signal}))
+    .finally(() => clearTimeout(tid));
+}
+
 // ── Init ──────────────────────────────────────────────────────────────────────
 async function init() {
   // Restore state from URL (for back/forward, shared links)
   readUrlState();
 
-  // Load meta
-  const res = await fetch('/api/meta');
-  state.meta = await res.json();
+  // ── Load meta with retry (handles Render.com cold-start 30–90s spin-up) ──────
+  // If the server is cold, the first fetch may fail with 502/504 or be aborted
+  // by our timeout. We retry up to 4 times with increasing delays before giving up.
+  const MAX_ATTEMPTS = 4;
+  const RETRY_DELAYS = [0, 10000, 20000, 30000]; // ms between attempts
+
+  let meta = null;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    if (attempt > 0) {
+      // Show waking-up message during retry
+      const elapsed = RETRY_DELAYS.slice(1, attempt + 1).reduce((a, b) => a + b, 0) / 1000;
+      productGrid.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon" style="font-size:2.5rem">⏳</div>
+          <h3 style="margin:12px 0 6px">Server waking up…</h3>
+          <p style="margin:0 0 14px;color:var(--muted)">
+            This takes ~30 seconds on first visit after idle. Retrying (${attempt}/${MAX_ATTEMPTS - 1})…
+          </p>
+          <div style="height:4px;width:160px;background:var(--surface2);border-radius:4px;overflow:hidden;margin:0 auto">
+            <div style="height:100%;width:${Math.min(100, (attempt / (MAX_ATTEMPTS - 1)) * 100)}%;background:var(--primary);border-radius:4px;transition:width .4s"></div>
+          </div>
+        </div>`;
+      await new Promise(r => setTimeout(r, RETRY_DELAYS[attempt]));
+    }
+
+    try {
+      const res = await fetchWithTimeout('/api/meta', {}, 15000);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      meta = await res.json();
+      break; // success — exit retry loop
+    } catch (e) {
+      if (attempt === MAX_ATTEMPTS - 1) {
+        // All retries exhausted — show actionable error
+        productGrid.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">⚠️</div>
+            <h3>Could not reach the server</h3>
+            <p>The server may still be starting up. Please wait a moment and try again.</p>
+            <div style="margin-top:16px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+              <button onclick="location.reload()" style="
+                background:var(--primary);color:#fff;border:none;border-radius:8px;
+                padding:10px 22px;font-size:14px;font-weight:600;cursor:pointer">
+                ↻ Reload page
+              </button>
+              <a href="tel:8885856510" style="
+                display:inline-block;background:var(--surface2);color:var(--text);
+                text-decoration:none;border-radius:8px;padding:10px 22px;
+                font-size:14px;font-weight:600">
+                📞 (888) 585-6510
+              </a>
+            </div>
+          </div>`;
+        return; // stop init — page is in error state
+      }
+    }
+  }
+
+  state.meta = meta;
 
   // Update hero stats
-  $('statProducts').textContent  = Number(state.meta.total).toLocaleString();
+  $('statProducts').textContent   = Number(state.meta.total).toLocaleString();
   $('statCategories').textContent = Object.keys(state.meta.categories).length;
-  $('statBrands').textContent    = state.meta.brands.length + '+';
-  totalCount.textContent         = Number(state.meta.total).toLocaleString() + ' products';
+  $('statBrands').textContent     = state.meta.brands.length + '+';
+  totalCount.textContent          = Number(state.meta.total).toLocaleString() + ' products';
 
   // Build category pills
   Object.keys(state.meta.categories).forEach(cat => {
@@ -481,7 +545,8 @@ async function loadProducts() {
   if (state.maxPrice)  params.set('max_price', state.maxPrice);
 
   try {
-    const res  = await fetch('/api/products?' + params);
+    const res  = await fetchWithTimeout('/api/products?' + params, {}, 20000);
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     const data = await res.json();
     state.total = data.total;
     state.totalPages = data.total_pages;
@@ -639,8 +704,8 @@ async function openProduct(productId) {
   document.body.style.overflow = 'hidden';
 
   const [prodRes, simRes] = await Promise.all([
-    fetch('/api/product/' + productId),
-    fetch('/api/similar/' + productId),
+    fetchWithTimeout('/api/product/' + productId, {}, 15000),
+    fetchWithTimeout('/api/similar/' + productId, {}, 15000),
   ]);
   const p  = await prodRes.json();
   const sim = await simRes.json();

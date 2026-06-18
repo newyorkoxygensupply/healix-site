@@ -1333,6 +1333,12 @@ def category_photo(cat_slug, n):
 def has_photos():
     return jsonify({"pexels": bool(PEXELS_API_KEY)})
 
+@app.route("/ping")
+def ping():
+    """Lightweight keep-alive endpoint — use with UptimeRobot (every 5 min)
+    to prevent Render free-tier cold starts."""
+    return "pong", 200
+
 @app.route("/api/catimg/<cat_slug>/<int:n>")
 def category_image(cat_slug, n):
     data = CAT_IMG_DATA.get(cat_slug, CAT_IMG_DATA["patient-care"])
