@@ -19,7 +19,7 @@ BASE_DIR       = Path(__file__).parent
 DB_PATH        = Path(os.getenv("DB_PATH", BASE_DIR / "medical_supplies.db"))
 IMG_CACHE      = BASE_DIR / ".img_cache"
 IMG_CACHE.mkdir(exist_ok=True)
-SITE_URL       = os.getenv("SITE_URL", "http://localhost:8080").rstrip("/")
+SITE_URL       = os.getenv("SITE_URL", "https://healixmedicalsupply.com").rstrip("/")
 SITE_NAME      = os.getenv("SITE_NAME", "Healix")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
 TODAY          = date.today().isoformat()
@@ -574,8 +574,14 @@ def _summary(p: dict) -> dict:
     }
 
 def _seo_product_title(p: dict) -> str:
-    return (f"{p['product_name']} — {p['brand']} | "
-            f"{p.get('subcategory') or p['category']} | {SITE_NAME}")
+    name   = p.get('product_name', '')
+    brand  = p.get('brand', '')
+    suffix = f" | {brand} | {SITE_NAME}"
+    # Keep title ≤ ~70 chars for clean Google display
+    max_name = max(70 - len(suffix), 20)
+    if len(name) > max_name:
+        name = name[:max_name].rsplit(' ', 1)[0].rstrip()
+    return f"{name}{suffix}"
 
 def _seo_product_desc(p: dict) -> str:
     desc  = (p.get("description") or "").strip()
@@ -589,18 +595,20 @@ def _seo_product_desc(p: dict) -> str:
     return base[:155]
 
 def _seo_cat_title(cat, sub=None, total=0):
+    total_str = f"{round(total/1000)*1000:,}+" if total >= 1000 else f"{total:,}"
     if sub:
-        return f"Buy {sub} Online | {cat} Supplies | {SITE_NAME} — {total:,} Products"
-    return f"Buy {cat} Medical Supplies Online | {SITE_NAME} — {total:,} Products"
+        return f"Buy {sub} Supplies Online | {cat} | {SITE_NAME} — {total_str} Products"
+    return f"Buy {cat} Medical Supplies Online | {total_str} Products | {SITE_NAME}"
 
 def _seo_cat_desc(cat, sub=None, total=0):
     kws    = CAT_SEO.get(cat, {}).get("keywords", [])
-    kw_str = ", ".join(kws[:3]) if kws else f"{cat.lower()} supplies"
+    kw_str = ", ".join(kws[:4]) if kws else f"{cat.lower()} supplies"
+    total_str = f"{round(total/1000)*1000:,}+" if total >= 1000 else f"{total:,}"
     if sub:
-        return (f"Shop {total:,} {sub} products online. {kw_str}. "
-                f"Clinical-grade quality from trusted brands. Fast shipping. — {SITE_NAME}")
-    return (f"Shop {total:,} {cat} medical supplies online. {kw_str}. "
-            f"Trusted brands, competitive pricing, fast shipping. — {SITE_NAME}")
+        return (f"Shop {total_str} {sub} products online. Browse {kw_str}. "
+                f"Clinical-grade quality, bulk pricing, fast shipping. — {SITE_NAME}")
+    return (f"Shop {total_str} {cat} medical supplies online. Includes {kw_str}. "
+            f"Trusted brands, bulk pricing for healthcare facilities, fast shipping. — {SITE_NAME}")
 
 # ── Google site verification ───────────────────────────────────────────────────
 @app.route("/googlee5995f15af11c811.html")
@@ -616,11 +624,11 @@ def index():
     top_cats = list(CATEGORIES.keys())[:8]
     return render_template("index.html",
         site_name=SITE_NAME, site_url=SITE_URL,
-        title=f"Medical Supplies Online | Buy {SITE_NAME} — {TOTAL:,}+ Clinical-Grade Products",
+        title=f"Medical Supplies Online — 500,000+ Clinical-Grade Products | {SITE_NAME}",
         description=(
-            f"Shop {TOTAL:,}+ clinical-grade medical supplies at {SITE_NAME}. "
+            "Shop 500,000+ clinical-grade medical supplies at Healix Medical Supply. "
             "Gloves, wound care, oxygen concentrators, CPAP machines, ostomy supplies, PPE, "
-            "IV supplies & more. Trusted brands, fast shipping."
+            "IV supplies & more. Bulk pricing for healthcare facilities. Fast shipping."
         ),
         canonical=SITE_URL + "/",
         og_image=SITE_URL + "/static/img/og-default.jpg",
@@ -1088,7 +1096,9 @@ def robots():
     sitemap_list = "\n".join(
         [f"Sitemap: {SITE_URL}/sitemap.xml",
          f"Sitemap: {SITE_URL}/sitemap-categories.xml",
-         f"Sitemap: {SITE_URL}/sitemap-brands.xml"]
+         f"Sitemap: {SITE_URL}/sitemap-brands.xml",
+         f"Sitemap: {SITE_URL}/sitemap-blog.xml",
+         f"Sitemap: {SITE_URL}/sitemap-cities.xml"]
         + [f"Sitemap: {SITE_URL}/sitemap-products-{b}.xml" for b in range(1, n_batches+1)]
     )
     body = f"""User-agent: *
@@ -1097,13 +1107,16 @@ Allow: /c/
 Allow: /p/
 Allow: /brand/
 Allow: /brands
+Allow: /blog
+Allow: /blog/
+Allow: /locations
+Allow: /city/
 Disallow: /api/
 Disallow: /health
 Disallow: /*?sort=
 Disallow: /*?avail=
 Disallow: /*?latex_free=
 Disallow: /*?sterile=
-Crawl-delay: 1
 
 {sitemap_list}
 """
