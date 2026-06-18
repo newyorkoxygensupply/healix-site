@@ -1,4 +1,4 @@
-/* Healix — Frontend App v6 */
+/* Healix — Frontend App v12 */
 
 // ── State ─────────────────────────────────────────────────────────────────────
 const state = {
@@ -991,18 +991,146 @@ function initAiToggle() {
   });
 }
 
+// ── AI Chat ───────────────────────────────────────────────────────────────────
+let chatHistory  = [];
+let chatOpen     = false;
+let chatBusy     = false;
+let chatGreeted  = false;
+
+function initChat() {
+  const unread = $('chatUnread');
+  if (unread) {
+    unread.style.display = 'flex';
+    setTimeout(() => { if (!chatOpen && unread) unread.style.display = 'none'; }, 8000);
+  }
+}
+
+function toggleChat() {
+  if (chatOpen) closeChat(); else openChat();
+}
+
+function openChat() {
+  chatOpen = true;
+  const win    = $('chatWindow');
+  const unread = $('chatUnread');
+  if (win)    win.style.display    = 'flex';
+  if (unread) unread.style.display = 'none';
+  const ico = $('chatBubbleIcon');
+  const cls = $('chatCloseIcon');
+  if (ico) ico.style.display = 'none';
+  if (cls) cls.style.display = '';
+  if (!chatGreeted) {
+    chatGreeted = true;
+    appendChatMessage('assistant',
+      "Hi! I'm the Healix AI assistant. I can help you find medical supplies, " +
+      "answer product questions, or connect you with our team. What can I help you with?");
+  }
+  setTimeout(scrollChatToBottom, 50);
+  const inp = $('chatInput');
+  if (inp) setTimeout(() => inp.focus(), 150);
+}
+
+function closeChat() {
+  chatOpen = false;
+  const win = $('chatWindow');
+  if (win) win.style.display = 'none';
+  const ico = $('chatBubbleIcon');
+  const cls = $('chatCloseIcon');
+  if (ico) ico.style.display = '';
+  if (cls) cls.style.display = 'none';
+}
+
+function appendChatMessage(role, content) {
+  const msgs = $('chatMessages');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role;
+  div.textContent = content;
+  msgs.appendChild(div);
+  scrollChatToBottom();
+}
+
+function showTyping() {
+  const msgs = $('chatMessages');
+  if (!msgs) return;
+  const div = document.createElement('div');
+  div.id = 'chatTyping';
+  div.className = 'chat-typing';
+  div.innerHTML = '<span></span><span></span><span></span>';
+  msgs.appendChild(div);
+  scrollChatToBottom();
+}
+
+function hideTyping() {
+  const el = $('chatTyping');
+  if (el) el.remove();
+}
+
+function scrollChatToBottom() {
+  const msgs = $('chatMessages');
+  if (msgs) msgs.scrollTop = msgs.scrollHeight;
+}
+
+async function submitChatMessage() {
+  if (chatBusy) return;
+  const inp = $('chatInput');
+  if (!inp) return;
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  appendChatMessage('user', text);
+  const sug = $('chatSuggestions');
+  if (sug) sug.style.display = 'none';
+  chatHistory.push({ role: 'user', content: text });
+  chatBusy = true;
+  const sendBtn = $('chatSendBtn');
+  if (sendBtn) sendBtn.disabled = true;
+  showTyping();
+  try {
+    const res  = await fetch('/api/chat', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ messages: chatHistory.slice(-10) }),
+    });
+    const data = await res.json();
+    hideTyping();
+    const reply = data.reply || "Sorry, I couldn't get a response. Please try again.";
+    appendChatMessage('assistant', reply);
+    chatHistory.push({ role: 'assistant', content: reply });
+  } catch (err) {
+    hideTyping();
+    appendChatMessage('assistant', 'Something went wrong. Please try again or call (888) 585-6510.');
+  } finally {
+    chatBusy = false;
+    if (sendBtn) sendBtn.disabled = false;
+    if (inp) inp.focus();
+  }
+}
+
+function sendSuggestion(text) {
+  const inp = $('chatInput');
+  if (inp) inp.value = text;
+  submitChatMessage();
+}
+
 // ── Expose globals ────────────────────────────────────────────────────────────
-window.openProduct     = openProduct;
-window.openInquiry     = openInquiry;
-window.closeInquiry    = closeInquiry;
-window.submitInquiry   = submitInquiry;
-window.goPage          = goPage;
-window.chipRemove      = chipRemove;
-window.switchImg       = switchImg;
-window.acSelectCat     = acSelectCat;
-window.acSelectBrand   = acSelectBrand;
-window.acSelectProduct = acSelectProduct;
-window.clearAiBanner   = clearAiBanner;
+window.openProduct       = openProduct;
+window.openInquiry       = openInquiry;
+window.closeInquiry      = closeInquiry;
+window.submitInquiry     = submitInquiry;
+window.goPage            = goPage;
+window.chipRemove        = chipRemove;
+window.switchImg         = switchImg;
+window.acSelectCat       = acSelectCat;
+window.acSelectBrand     = acSelectBrand;
+window.acSelectProduct   = acSelectProduct;
+window.clearAiBanner     = clearAiBanner;
+window.toggleChat        = toggleChat;
+window.openChat          = openChat;
+window.closeChat         = closeChat;
+window.submitChatMessage = submitChatMessage;
+window.sendSuggestion    = sendSuggestion;
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 init();
+initChat();

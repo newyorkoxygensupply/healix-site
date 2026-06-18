@@ -22,6 +22,7 @@ IMG_CACHE.mkdir(exist_ok=True)
 SITE_URL       = os.getenv("SITE_URL", "https://healixmedicalsupply.com").rstrip("/")
 SITE_NAME      = os.getenv("SITE_NAME", "Healix")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
+GROQ_API_KEY   = os.getenv("GROQ_API_KEY", "")
 TODAY          = date.today().isoformat()
 
 # ── Blog data ──────────────────────────────────────────────────────────────────
@@ -1139,6 +1140,83 @@ def suggest():
     })
     resp.headers["Cache-Control"] = "public, max-age=60"
     return resp
+
+_chat_system_cache: dict = {}
+
+def _get_chat_system() -> str:
+    """Build a compact system prompt from live catalog data (cached after first call)."""
+    if _chat_system_cache.get("text"):
+        return _chat_system_cache["text"]
+    top_cats   = list(CATEGORIES.keys())[:20]
+    top_brands = BRANDS[:30]
+    text = (
+        "You are a helpful AI assistant for Healix Medical Supply "
+        "(healixmedicalsupply.com), a B2B medical supply distributor. "
+        "You help healthcare professionals, hospitals, and procurement teams "
+        "find the right medical supplies. "
+        "Keep answers concise, professional, and focused on medical supply topics. "
+        "When users ask about products, mention they can search the catalog. "
+        "For urgent clinical questions, direct them to their clinician. "
+        "Phone: (888) 585-6510. "
+        f"Top product categories: {', '.join(top_cats)}. "
+        f"Featured brands: {', '.join(top_brands[:20])}. "
+        "Always respond in plain text — no markdown, no bullet symbols, no asterisks."
+    )
+    _chat_system_cache["text"] = text
+    return text
+
+
+@app.route("/api/chat", methods=["POST"])
+def chat():
+    """Groq-powered chat assistant."""
+    if not GROQ_API_KEY:
+        return jsonify({"reply": "AI chat is not configured yet. Please call (888) 585-6510 for assistance."})
+
+    data     = request.get_json(silent=True) or {}
+    messages = data.get("messages", [])
+    if not isinstance(messages, list):
+        return jsonify({"error": "Invalid messages"}), 400
+
+    # Sanitise: only keep role/content, limit to last 10 turns
+    clean = []
+    for m in messages[-10:]:
+        role    = str(m.get("role", "")).strip()
+        content = str(m.get("content", "")).strip()
+        if role in ("user", "assistant") and content:
+            clean.append({"role": role, "content": content[:1000]})
+
+    if not clean or clean[-1]["role"] != "user":
+        return jsonify({"error": "No user message"}), 400
+
+    payload = json.dumps({
+        "model":       "llama-3.1-8b-instant",
+        "messages":    [{"role": "system", "content": _get_chat_system()}] + clean,
+        "max_tokens":  400,
+        "temperature": 0.4,
+    }).encode("utf-8")
+
+    req = urllib.request.Request(
+        "https://api.groq.com/openai/v1/chat/completions",
+        data    = payload,
+        headers = {
+            "Content-Type":  "application/json",
+            "Authorization": f"Bearer {GROQ_API_KEY}",
+        },
+        method = "POST",
+    )
+    try:
+        with urllib.request.urlopen(req, timeout=15) as r:
+            resp_data = json.loads(r.read())
+        reply = resp_data["choices"][0]["message"]["content"].strip()
+    except urllib.error.HTTPError as e:
+        log.error("Groq API error %s: %s", e.code, e.read())
+        reply = "I'm having trouble connecting right now. Please try again or call (888) 585-6510."
+    except Exception as e:
+        log.error("Chat error: %s", e)
+        reply = "Something went wrong. Please try again or call (888) 585-6510."
+
+    return jsonify({"reply": reply})
+
 
 @app.route("/api/product/<product_id>")
 def product_detail(product_id):
