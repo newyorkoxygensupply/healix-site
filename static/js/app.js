@@ -97,8 +97,14 @@ function hashCode(str) {
   return Math.abs(h);
 }
 
-// Returns a same-origin catimg SVG URL — server always responds with an image
+// Returns a same-origin photo URL — uses Pexels if API key is set, else SVG icon
 function getProductImageUrl(category, productId) {
+  const slug = CAT_SLUG[category] || 'patient-care';
+  const n    = hashCode(productId || '') % 8;
+  return `/api/photo/${slug}/${n}`;
+}
+
+function getCatImgUrl(category, productId) {
   const slug = CAT_SLUG[category] || 'patient-care';
   const n    = hashCode(productId || '') % 8;
   return `/api/catimg/${slug}/${n}`;
@@ -444,7 +450,8 @@ function renderProducts(products) {
         <div class="card-img">
           <img src="${p.image_url_1 || getProductImageUrl(p.category, p.product_id)}"
                alt="${escHtml(p.product_name)}" loading="lazy"
-               onerror="this.onerror=null;this.src='${getProductImageUrl(p.category, p.product_id)}'">
+               data-fallback="${getCatImgUrl(p.category, p.product_id)}"
+               onerror="if(this.src!==this.dataset.fallback){this.onerror=null;this.src=this.dataset.fallback;}">
           <div class="img-placeholder" style="display:none">${emoji}</div>
           <span class="card-badge ${badgeCls}">${badgeTxt}</span>
         </div>
