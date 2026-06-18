@@ -455,13 +455,21 @@ function renderProducts(products) {
 
     const productSlug = slugify(p.product_name);
     const productHref = `/p/${p.product_id}/${productSlug}`;
+    const _slug = CAT_SLUG[p.category] || 'patient-care';
+    const _n    = hashCode(p.product_id || '') % 8;
+    const _pxUrl  = `/api/photo/${_slug}/${_n}`;
+    const _svgUrl = getCatImgUrl(p.category, p.product_id);
+    const _imgSrc = p.image_url_1
+      ? `/api/img-proxy?url=${encodeURIComponent(p.image_url_1)}`
+      : _pxUrl;
     return `
       <div class="product-card" style="animation-delay:${delay}ms" onclick="openProduct('${p.product_id}')">
       <a href="${productHref}" class="card-seo-link" aria-label="${escHtml(p.product_name)}" tabindex="-1"></a>
         <div class="card-img">
-          <img src="${p.image_url_1 ? '/api/img-proxy?url=' + encodeURIComponent(p.image_url_1) : getCatImgUrl(p.category, p.product_id)}"
+          <img src="${_imgSrc}"
+               data-px="${_pxUrl}" data-sv="${_svgUrl}"
                alt="" role="presentation" loading="lazy"
-               onerror="this.onerror=null;this.src='${getCatImgUrl(p.category, p.product_id)}'">
+               onerror="var s=this;if(s.src!==s.dataset.px){s.src=s.dataset.px}else{s.onerror=null;s.src=s.dataset.sv}">
           <div class="img-placeholder" style="display:none">${emoji}</div>
           <span class="card-badge ${badgeCls}">${badgeTxt}</span>
         </div>
