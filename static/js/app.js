@@ -448,10 +448,9 @@ function renderProducts(products) {
       <div class="product-card" style="animation-delay:${delay}ms" onclick="openProduct('${p.product_id}')">
       <a href="${productHref}" class="card-seo-link" aria-label="${escHtml(p.product_name)}" tabindex="-1"></a>
         <div class="card-img">
-          <img src="${p.image_url_1 ? '/api/img-proxy?url=' + encodeURIComponent(p.image_url_1) : getProductImageUrl(p.category, p.product_id)}"
-               alt="${escHtml(p.product_name)}" loading="lazy"
-               data-fallback="${getCatImgUrl(p.category, p.product_id)}"
-               onerror="if(this.src!==this.dataset.fallback){this.onerror=null;this.src=this.dataset.fallback;}">
+          <img src="${p.image_url_1 ? '/api/img-proxy?url=' + encodeURIComponent(p.image_url_1) : getCatImgUrl(p.category, p.product_id)}"
+               alt="" role="presentation" loading="lazy"
+               onerror="this.onerror=null;this.src='${getCatImgUrl(p.category, p.product_id)}'">
           <div class="img-placeholder" style="display:none">${emoji}</div>
           <span class="card-badge ${badgeCls}">${badgeTxt}</span>
         </div>

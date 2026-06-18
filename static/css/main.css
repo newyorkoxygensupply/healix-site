@@ -929,6 +929,11 @@ body {
   object-fit: cover;
   display: block;
   transition: transform .45s var(--ease);
+  /* Prevent broken-image alt text from overflowing */
+  overflow: hidden;
+  text-indent: -9999px;
+  font-size: 0;
+  color: transparent;
 }
 .product-card:hover .card-img img { transform: scale(1.04); }
 
