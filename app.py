@@ -1030,6 +1030,49 @@ def proxy_image():
     """Legacy image proxy — kept for URL compatibility."""
     return Response("", status=404)
 
+@app.route("/api/img-proxy")
+def img_proxy():
+    """
+    Server-side image proxy.  Fetches product images from the source domain
+    (medline.com etc.) with a matching Referer so hotlink protection is bypassed,
+    then caches the result locally for 30 days.
+    """
+    url = request.args.get("url", "").strip()
+    if not url or not url.startswith("https://"):
+        return Response("", status=400)
+
+    # Only allow medline.com image URLs (allowlist for safety)
+    from urllib.parse import urlparse
+    host = urlparse(url).netloc
+    if not (host.endswith("medline.com") or host.endswith("medlineplus.gov")):
+        return Response("", status=403)
+
+    cache_key  = hashlib.sha1(url.encode()).hexdigest()
+    cache_file = IMG_CACHE / cache_key
+
+    if cache_file.exists():
+        resp = Response(cache_file.read_bytes(), content_type="image/jpeg")
+        resp.headers["Cache-Control"] = "public, max-age=2592000"
+        return resp
+
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/124.0 Safari/537.36",
+            "Referer":    "https://www.medline.com/",
+            "Accept":     "image/webp,image/apng,image/*,*/*;q=0.8",
+        })
+        with urllib.request.urlopen(req, timeout=8) as r:
+            img_data = r.read()
+        cache_file.write_bytes(img_data)
+        resp = Response(img_data, content_type="image/jpeg")
+        resp.headers["Cache-Control"] = "public, max-age=2592000"
+        return resp
+    except Exception as e:
+        log.debug("img-proxy failed for %s: %s", url, e)
+        return Response("", status=404)
+
 @app.route("/api/inquiry", methods=["POST"])
 def submit_inquiry():
     data  = request.get_json(silent=True) or {}
