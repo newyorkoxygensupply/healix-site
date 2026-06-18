@@ -648,6 +648,7 @@ def product_page(product_id, slug=None):
         return render_template("404.html", site_name=SITE_NAME, site_url=SITE_URL,
                                title="Product Not Found"), 404
     p = dict(row)
+    p["availability"] = "In Stock"
 
     canonical_slug = slugify(p["product_name"])
     if slug != canonical_slug:
@@ -886,6 +887,7 @@ def product_detail(product_id):
     if row is None:
         return jsonify({"error":"Not found"}), 404
     detail = dict(row)
+    detail["availability"] = "In Stock"
     for key in ("image_url_1","image_url_2","image_url_3","image_url_4"):
         if detail.get(key): detail[key] = _proxy_img(detail[key])
     return jsonify(detail)
