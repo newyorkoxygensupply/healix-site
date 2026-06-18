@@ -538,6 +538,210 @@ CAT_RELATED = {
     "Urology & Ostomy":    ["Skin Care", "Patient Care", "Incontinence", "Lab Supplies"],
 }
 
+# ── Smart Search Engine ────────────────────────────────────────────────────────
+# Maps medical terms/phrases → category (longest match wins)
+_TERM_TO_CAT = {
+    # Gloves
+    "nitrile glove":"Gloves","latex glove":"Gloves","exam glove":"Gloves",
+    "surgical glove":"Gloves","disposable glove":"Gloves","vinyl glove":"Gloves",
+    "chemotherapy glove":"Gloves","chemo glove":"Gloves","nitrile":"Gloves",
+    # Wound Care
+    "wound dressing":"Wound Care","dressing change":"Wound Care","wound care":"Wound Care",
+    "hydrocolloid":"Wound Care","alginate dressing":"Wound Care","foam dressing":"Wound Care",
+    "compression bandage":"Wound Care","elastic bandage":"Wound Care","wound vac":"Wound Care",
+    "npwt":"Wound Care","gauze":"Wound Care","bandage":"Wound Care","suture":"Wound Care",
+    "wound closure":"Wound Care","antimicrobial dressing":"Wound Care","wound":"Wound Care",
+    # Urology & Ostomy
+    "foley catheter":"Urology & Ostomy","urinary catheter":"Urology & Ostomy",
+    "colostomy":"Urology & Ostomy","ileostomy":"Urology & Ostomy","urostomy":"Urology & Ostomy",
+    "ostomy pouch":"Urology & Ostomy","ostomy bag":"Urology & Ostomy","ostomy":"Urology & Ostomy",
+    "intermittent catheter":"Urology & Ostomy","urinary bag":"Urology & Ostomy",
+    "catheter":"Urology & Ostomy","condom catheter":"Urology & Ostomy",
+    # Respiratory
+    "oxygen concentrator":"Respiratory","portable oxygen":"Respiratory","home oxygen":"Respiratory",
+    "cpap machine":"Respiratory","bipap machine":"Respiratory","cpap":"Respiratory",
+    "bipap":"Respiratory","nebulizer":"Respiratory","ventilator":"Respiratory",
+    "tracheostomy":"Respiratory","nasal cannula":"Respiratory","oxygen mask":"Respiratory",
+    "aerosol mask":"Respiratory","suction catheter":"Respiratory","oxygen":"Respiratory",
+    # Diagnostic Equipment
+    "pulse oximeter":"Diagnostic Equipment","blood pressure monitor":"Diagnostic Equipment",
+    "stethoscope":"Diagnostic Equipment","thermometer":"Diagnostic Equipment",
+    "glucometer":"Diagnostic Equipment","blood glucose monitor":"Diagnostic Equipment",
+    "otoscope":"Diagnostic Equipment","ophthalmoscope":"Diagnostic Equipment",
+    "ecg machine":"Diagnostic Equipment","ekg":"Diagnostic Equipment",
+    "sphygmomanometer":"Diagnostic Equipment","exam light":"Diagnostic Equipment",
+    # PPE
+    "n95 mask":"PPE","kn95":"PPE","surgical mask":"PPE","procedure mask":"PPE",
+    "isolation gown":"PPE","face shield":"PPE","safety glasses":"PPE",
+    "protective coverall":"PPE","n95":"PPE","ppe":"PPE","face mask":"PPE",
+    # IV & Vascular Access
+    "picc line":"IV & Vascular Access","iv catheter":"IV & Vascular Access",
+    "iv tubing":"IV & Vascular Access","iv bag":"IV & Vascular Access",
+    "saline flush":"IV & Vascular Access","butterfly needle":"IV & Vascular Access",
+    "blood collection":"IV & Vascular Access","vacutainer":"IV & Vascular Access",
+    "tourniquet":"IV & Vascular Access","syringe":"IV & Vascular Access",
+    "hypodermic needle":"IV & Vascular Access","needle":"IV & Vascular Access",
+    "intravenous":"IV & Vascular Access","iv set":"IV & Vascular Access",
+    # Orthopedic & Rehab
+    "knee brace":"Orthopedic & Rehab","ankle brace":"Orthopedic & Rehab",
+    "wrist brace":"Orthopedic & Rehab","back brace":"Orthopedic & Rehab",
+    "cervical collar":"Orthopedic & Rehab","splint":"Orthopedic & Rehab",
+    "compression stocking":"Orthopedic & Rehab","ted hose":"Orthopedic & Rehab",
+    "ace bandage":"Orthopedic & Rehab","compression sleeve":"Orthopedic & Rehab",
+    "brace":"Orthopedic & Rehab","orthopedic":"Orthopedic & Rehab",
+    "physical therapy":"Orthopedic & Rehab","rehab":"Orthopedic & Rehab",
+    # Incontinence
+    "adult diaper":"Incontinence","adult brief":"Incontinence","pull-up brief":"Incontinence",
+    "underpads":"Incontinence","chux pad":"Incontinence","incontinence pad":"Incontinence",
+    "bladder control":"Incontinence","absorbent pad":"Incontinence","poise":"Incontinence",
+    "incontinence":"Incontinence",
+    # Patient Care
+    "bedpan":"Patient Care","urinal":"Patient Care","emesis basin":"Patient Care",
+    "patient lift":"Patient Care","transfer belt":"Patient Care","gait belt":"Patient Care",
+    "call light":"Patient Care","bedrail":"Patient Care",
+    # Mobility & DME
+    "wheelchair":"Mobility & DME","power wheelchair":"Mobility & DME",
+    "rollator":"Mobility & DME","walker":"Mobility & DME","crutch":"Mobility & DME",
+    "quad cane":"Mobility & DME","transport chair":"Mobility & DME",
+    "knee scooter":"Mobility & DME","lift chair":"Mobility & DME","dme":"Mobility & DME",
+    "cane":"Mobility & DME",
+    # Skin Care
+    "skin barrier cream":"Skin Care","moisture barrier":"Skin Care","skin protectant":"Skin Care",
+    "barrier cream":"Skin Care","skin lotion":"Skin Care","wound cream":"Skin Care",
+    "skin care":"Skin Care",
+    # Lab Supplies
+    "test tube":"Lab Supplies","specimen container":"Lab Supplies","culture tube":"Lab Supplies",
+    "petri dish":"Lab Supplies","pipette":"Lab Supplies","microscope slide":"Lab Supplies",
+    "lab coat":"Lab Supplies","specimen bag":"Lab Supplies","centrifuge tube":"Lab Supplies",
+    # OR & Surgery
+    "surgical drape":"OR & Surgery","sterile drape":"OR & Surgery","operating room":"OR & Surgery",
+    "scalpel":"OR & Surgery","retractor":"OR & Surgery","surgical forcep":"OR & Surgery",
+    "surgical instrument":"OR & Surgery","mayo stand":"OR & Surgery",
+    # Nutrition
+    "enteral feeding":"Nutrition","feeding tube":"Nutrition","g-tube":"Nutrition",
+    "ng tube":"Nutrition","nasogastric":"Nutrition","tube feeding":"Nutrition",
+    "enteral formula":"Nutrition","parenteral nutrition":"Nutrition","tpn":"Nutrition",
+    # First Aid
+    "first aid kit":"First Aid","adhesive bandage":"First Aid","band-aid":"First Aid",
+    "antiseptic wipe":"First Aid","hydrogen peroxide":"First Aid","iodine":"First Aid",
+    "first aid":"First Aid",
+    # Dental
+    "dental mirror":"Dental","dental probe":"Dental","dental supply":"Dental",
+    "oral care":"Dental","toothbrush":"Dental","dental":"Dental",
+    # Pediatric
+    "neonatal":"Pediatric","pediatric catheter":"Pediatric","infant supply":"Pediatric",
+    "pediatric":"Pediatric","infant":"Pediatric","newborn":"Pediatric",
+    # Pharmacy
+    "prescription bag":"Pharmacy","pill counter":"Pharmacy","medication cup":"Pharmacy",
+    "dispensing":"Pharmacy","pharmacy":"Pharmacy",
+    # Textiles
+    "hospital gown":"Textiles","patient gown":"Textiles","scrub uniform":"Textiles",
+    "surgical gown":"Textiles","scrubs":"Textiles","lab coat":"Lab Supplies",
+    "bed pad":"Textiles","draw sheet":"Textiles",
+}
+
+# FTS synonym expansion (term → extra keywords to add to FTS query)
+_SYNONYMS = {
+    "wound":       "dressing bandage gauze wound care",
+    "glove":       "exam glove surgical glove nitrile",
+    "diaper":      "brief incontinence pull-up adult",
+    "cpap":        "cpap mask cpap machine sleep apnea",
+    "oxygen":      "oxygen concentrator portable oxygen",
+    "foley":       "foley catheter urinary catheter",
+    "iv":          "intravenous catheter vascular",
+    "brace":       "orthopedic brace support splint",
+    "mask":        "face mask surgical mask procedure",
+    "syringe":     "syringe needle injection",
+    "stethoscope": "stethoscope auscultation cardiac",
+    "wheelchair":  "wheelchair mobility transport chair",
+    "walker":      "walker rollator mobility aid",
+    "dressing":    "dressing bandage wound care gauze",
+    "compression": "compression stocking ted hose elastic",
+    "catheter":    "catheter urinary foley",
+    "ostomy":      "ostomy pouch colostomy ileostomy",
+    "nebulizer":   "nebulizer inhaler aerosol mask",
+    "feeding":     "feeding tube enteral nutrition",
+    "suture":      "suture wound closure staple",
+    "gown":        "isolation gown patient gown surgical",
+    "splint":      "splint brace orthopedic immobilizer",
+}
+
+def _smart_parse(query: str) -> dict:
+    """Parse a natural language medical supply query into structured search params."""
+    q_lo = query.lower().strip()
+    result: dict = {}
+
+    # 1. Category — longest matching term wins
+    best_term, best_cat = "", ""
+    for term, cat in _TERM_TO_CAT.items():
+        if term in q_lo and len(term) > len(best_term):
+            best_term, best_cat = term, cat
+    if best_cat:
+        result["category"] = best_cat
+
+    # 2. Properties
+    if re.search(r'\b(sterile|sterilized|sterility)\b', q_lo):
+        result["sterile"] = "Yes"
+    if re.search(r'\b(latex.?free|non.?latex|latex allergy|nitrile)\b', q_lo):
+        result["latex_free"] = "Yes"
+
+    # 3. Price range
+    m_max = re.search(r'(?:under|less than|below|max(?:imum)?|no more than)\s*\$?\s*(\d+(?:\.\d+)?)', q_lo)
+    if m_max:
+        result["max_price"] = str(int(float(m_max.group(1))))
+    elif re.search(r'\b(cheap|budget|affordable|economy|low.?cost|inexpensive)\b', q_lo):
+        result["max_price"] = "30"
+    m_min = re.search(r'(?:over|more than|above|at least|minimum|min)\s*\$?\s*(\d+(?:\.\d+)?)', q_lo)
+    if m_min:
+        result["min_price"] = str(int(float(m_min.group(1))))
+
+    # 4. Brand detection
+    for brand in BRANDS:
+        if brand.lower() in q_lo:
+            result["brand"] = brand
+            break
+
+    # 5. Clean query — strip structural words already extracted
+    clean = q_lo
+    for pat in [
+        r'(?:under|less than|below|max(?:imum)?|no more than|over|above|at least|minimum)\s*\$?\s*\d+',
+        r'\b(?:sterile|latex.?free|non.?latex|cheap|budget|affordable|economy|inexpensive|low.?cost)\b',
+        r'\b(?:i need|looking for|find me|show me|do you have|where can i|buy|order|get)\b',
+    ]:
+        clean = re.sub(pat, '', clean)
+    if result.get("brand"):
+        clean = clean.replace(result["brand"].lower(), '')
+    clean = ' '.join(clean.split())
+
+    # 6. Synonym expansion on cleaned query
+    expanded_terms = set(clean.split())
+    for kw, expansion in _SYNONYMS.items():
+        if kw in clean:
+            expanded_terms.update(expansion.split())
+    result["q"] = ' '.join(expanded_terms) if expanded_terms else ''
+
+    # 7. Human-readable interpretation
+    parts = []
+    if best_term:
+        parts.append(best_term.title())
+    elif clean:
+        parts.append(f'"{clean}"')
+    if result.get("brand"):
+        parts.append(f"Brand: {result['brand']}")
+    if result.get("category") and not best_term:
+        parts.append(result["category"])
+    if result.get("sterile"):
+        parts.append("sterile")
+    if result.get("latex_free"):
+        parts.append("latex-free")
+    if result.get("max_price"):
+        parts.append(f"under ${result['max_price']}")
+    if result.get("min_price"):
+        parts.append(f"over ${result['min_price']}")
+    result["interpretation"] = " · ".join(parts) if parts else query
+
+    return result
+
 # ── Helpers ────────────────────────────────────────────────────────────────────
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
@@ -878,6 +1082,63 @@ def products():
         "total_pages":total_pages,
         "products":[_summary(r) for r in rows],
     })
+
+@app.route("/api/ai-search", methods=["POST"])
+def ai_search():
+    """Smart natural-language product search (no external API required)."""
+    data  = request.get_json(silent=True) or {}
+    query = (data.get("q") or "").strip()
+    if not query:
+        return jsonify({"error": "No query"}), 400
+
+    params         = _smart_parse(query)
+    interpretation = params.pop("interpretation", query)
+
+    total, rows = _query(
+        category  = params.get("category", ""),
+        brand     = params.get("brand", ""),
+        q         = params.get("q", query),
+        min_price = params.get("min_price", ""),
+        max_price = params.get("max_price", ""),
+        latex_free= params.get("latex_free", ""),
+        sterile   = params.get("sterile", ""),
+        limit     = 24,
+    )
+    total_pages = max(1, -(-total // 24))
+    return jsonify({
+        "ai":             True,
+        "interpretation": interpretation,
+        "params":         {k: v for k, v in params.items() if v},
+        "total":          total,
+        "total_pages":    total_pages,
+        "page":           1,
+        "per_page":       24,
+        "products":       [_summary(r) for r in rows],
+    })
+
+@app.route("/api/suggest")
+def suggest():
+    """Autocomplete: products, categories, brands matching a prefix."""
+    q = request.args.get("q", "").strip()
+    if len(q) < 2:
+        return jsonify({"products": [], "categories": [], "brands": []})
+    q_like = f"%{q}%"
+    db     = get_db()
+    prods  = db.execute(
+        "SELECT product_id, product_name, brand, category "
+        "FROM products WHERE product_name LIKE ? LIMIT 6",
+        [q_like],
+    ).fetchall()
+    cats   = [c for c in CATEGORIES if q.lower() in c.lower()][:4]
+    brands = [b for b in BRANDS   if q.lower() in b.lower()][:4]
+    resp   = jsonify({
+        "products":   [{"id": r["product_id"], "name": r["product_name"],
+                        "brand": r["brand"], "category": r["category"]} for r in prods],
+        "categories": cats,
+        "brands":     brands,
+    })
+    resp.headers["Cache-Control"] = "public, max-age=60"
+    return resp
 
 @app.route("/api/product/<product_id>")
 def product_detail(product_id):

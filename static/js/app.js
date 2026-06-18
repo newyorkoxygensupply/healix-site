@@ -9,6 +9,7 @@ const state = {
   viewMode: 'grid',
   total: 0, totalPages: 1,
   meta: null,
+  aiMode: false,
 };
 
 // ── DOM Refs ──────────────────────────────────────────────────────────────────
@@ -222,6 +223,8 @@ async function init() {
 
   // Events
   bindEvents();
+  initAutocomplete();
+  initAiToggle();
 
   // Initial load
   loadProducts();
@@ -294,9 +297,76 @@ function bindEvents() {
 
 // ── Search ────────────────────────────────────────────────────────────────────
 function doSearch() {
-  state.q = $('searchInput').value.trim();
-  state.page = 1;
-  loadProducts();
+  const q = $('searchInput').value.trim();
+  if (state.aiMode && q) {
+    doAiSearch(q);
+  } else {
+    state.q = q;
+    state.page = 1;
+    loadProducts();
+  }
+}
+
+async function doAiSearch(q) {
+  showSkeleton();
+  const btn = $('searchBtn');
+  const origHtml = btn.innerHTML;
+  btn.innerHTML = '<svg class="ai-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/></svg> Thinking…';
+  btn.disabled = true;
+
+  try {
+    const res  = await fetch('/api/ai-search', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({q}),
+    });
+    const data = await res.json();
+
+    // Apply AI-extracted params to state
+    state.q           = data.params.q           || '';
+    state.category    = data.params.category    || '';
+    state.brand       = data.params.brand       || '';
+    state.minPrice    = data.params.min_price   ? String(data.params.min_price) : '';
+    state.maxPrice    = data.params.max_price   ? String(data.params.max_price) : '';
+    state.latexFree   = !!data.params.latex_free;
+    state.sterile     = !!data.params.sterile;
+    state.page        = 1;
+    state.total       = data.total;
+    state.totalPages  = data.total_pages;
+
+    renderProducts(data.products);
+    renderPagination();
+    renderAiBanner(data.interpretation, data.params);
+    resultsLabel.textContent = Number(data.total).toLocaleString() + ' results';
+    totalCount.textContent   = Number(data.total).toLocaleString() + ' products';
+    updateUrl();
+    updateTitle();
+    hideAutocomplete();
+  } catch(e) {
+    state.q = q; state.page = 1;
+    loadProducts();
+  } finally {
+    btn.innerHTML = origHtml;
+    btn.disabled  = false;
+  }
+}
+
+function renderAiBanner(interpretation, params) {
+  const banner = $('aiBanner');
+  if (!banner || !interpretation) return;
+  const chips = [];
+  if (params.category)  chips.push(`<span class="ai-chip ai-chip-cat">📂 ${escHtml(params.category)}</span>`);
+  if (params.brand)     chips.push(`<span class="ai-chip">🏷 ${escHtml(params.brand)}</span>`);
+  if (params.sterile)   chips.push(`<span class="ai-chip">🧪 Sterile</span>`);
+  if (params.latex_free)chips.push(`<span class="ai-chip">✅ Latex-Free</span>`);
+  if (params.max_price) chips.push(`<span class="ai-chip">💰 Under $${params.max_price}</span>`);
+  banner.innerHTML = `<span class="ai-spark">✨</span><span class="ai-banner-text"><strong>Smart Search:</strong> ${escHtml(interpretation)}</span>${chips.join('')}<button class="ai-banner-clear" onclick="clearAiBanner()" aria-label="Clear AI search">✕</button>`;
+  banner.style.display = 'flex';
+}
+
+function clearAiBanner() {
+  const banner = $('aiBanner');
+  if (banner) banner.style.display = 'none';
 }
 
 // ── Category select ───────────────────────────────────────────────────────────
@@ -796,14 +866,143 @@ function slugify(str) {
   return str.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 }
 
+// ── Autocomplete ──────────────────────────────────────────────────────────────
+let _acTimer = null;
+
+function initAutocomplete() {
+  const inp  = $('searchInput');
+  const drop = $('acDrop');
+  if (!inp || !drop) return;
+
+  inp.addEventListener('input', () => {
+    clearTimeout(_acTimer);
+    const q = inp.value.trim();
+    if (q.length < 2) { hideAutocomplete(); return; }
+    _acTimer = setTimeout(() => fetchSuggestions(q), 200);
+  });
+
+  inp.addEventListener('keydown', e => {
+    if (e.key === 'Escape') hideAutocomplete();
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const items = drop.querySelectorAll('.ac-item');
+      if (items.length) items[0].focus();
+    }
+  });
+
+  drop.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { hideAutocomplete(); inp.focus(); }
+    if (e.key === 'ArrowDown') { e.preventDefault(); (e.target.nextElementSibling || drop.firstElementChild)?.focus(); }
+    if (e.key === 'ArrowUp')   { e.preventDefault(); (e.target.previousElementSibling || drop.lastElementChild)?.focus(); }
+  });
+
+  document.addEventListener('click', e => {
+    if (!inp.contains(e.target) && !drop.contains(e.target)) hideAutocomplete();
+  });
+}
+
+async function fetchSuggestions(q) {
+  const drop = $('acDrop');
+  if (!drop) return;
+  try {
+    const res  = await fetch(`/api/suggest?q=${encodeURIComponent(q)}`);
+    const data = await res.json();
+    renderAutocomplete(data, q);
+  } catch(e) { hideAutocomplete(); }
+}
+
+function renderAutocomplete(data, q) {
+  const drop = $('acDrop');
+  if (!drop) return;
+  const rows = [];
+
+  if (data.categories?.length) {
+    rows.push(`<div class="ac-section">Categories</div>`);
+    data.categories.forEach(cat => {
+      rows.push(`<button class="ac-item ac-cat" tabindex="0" onclick="acSelectCat(${JSON.stringify(cat)})">`
+        + `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>`
+        + ` ${escHtml(cat)}</button>`);
+    });
+  }
+  if (data.brands?.length) {
+    rows.push(`<div class="ac-section">Brands</div>`);
+    data.brands.forEach(b => {
+      rows.push(`<button class="ac-item ac-brand" tabindex="0" onclick="acSelectBrand(${JSON.stringify(b)})">`
+        + `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`
+        + ` ${escHtml(b)}</button>`);
+    });
+  }
+  if (data.products?.length) {
+    rows.push(`<div class="ac-section">Products</div>`);
+    data.products.forEach(p => {
+      rows.push(`<button class="ac-item ac-product" tabindex="0" onclick="acSelectProduct(${JSON.stringify(p.id)},${JSON.stringify(p.name)})">`
+        + `<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2z"/><polyline points="16 3 12 7 8 3"/></svg>`
+        + ` <span class="ac-prod-name">${escHtml(p.name.slice(0,60))}</span><span class="ac-prod-brand">${escHtml(p.brand)}</span></button>`);
+    });
+  }
+
+  if (!rows.length) { hideAutocomplete(); return; }
+  drop.innerHTML = rows.join('');
+  drop.style.display = 'block';
+}
+
+function hideAutocomplete() {
+  const drop = $('acDrop');
+  if (drop) drop.style.display = 'none';
+}
+
+function acSelectCat(cat) {
+  state.category = cat; state.q = ''; state.page = 1;
+  $('searchInput').value = '';
+  hideAutocomplete();
+  document.querySelectorAll('.cat-pill').forEach(b => b.classList.toggle('active', b.dataset.cat === cat));
+  renderSubFilter(cat);
+  loadProducts();
+}
+
+function acSelectBrand(brand) {
+  state.brand = brand; state.q = ''; state.page = 1;
+  $('searchInput').value = brand;
+  hideAutocomplete();
+  loadProducts();
+}
+
+function acSelectProduct(id, name) {
+  $('searchInput').value = name;
+  hideAutocomplete();
+  openProduct(id);
+}
+
+// ── AI Toggle ─────────────────────────────────────────────────────────────────
+function initAiToggle() {
+  const btn = $('aiToggle');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    state.aiMode = !state.aiMode;
+    btn.classList.toggle('active', state.aiMode);
+    btn.title = state.aiMode ? 'AI Search ON — click to disable' : 'Enable AI Search';
+    $('searchInput').placeholder = state.aiMode
+      ? 'Describe what you need (e.g. "sterile latex-free gloves under $50")…'
+      : 'Search 500,000+ medical supplies…';
+    if (!state.aiMode) {
+      const banner = $('aiBanner');
+      if (banner) banner.style.display = 'none';
+    }
+  });
+}
+
 // ── Expose globals ────────────────────────────────────────────────────────────
-window.openProduct  = openProduct;
-window.openInquiry  = openInquiry;
-window.closeInquiry = closeInquiry;
-window.submitInquiry = submitInquiry;
-window.goPage       = goPage;
-window.chipRemove   = chipRemove;
-window.switchImg    = switchImg;
+window.openProduct     = openProduct;
+window.openInquiry     = openInquiry;
+window.closeInquiry    = closeInquiry;
+window.submitInquiry   = submitInquiry;
+window.goPage          = goPage;
+window.chipRemove      = chipRemove;
+window.switchImg       = switchImg;
+window.acSelectCat     = acSelectCat;
+window.acSelectBrand   = acSelectBrand;
+window.acSelectProduct = acSelectProduct;
+window.clearAiBanner   = clearAiBanner;
 
 // ── Start ─────────────────────────────────────────────────────────────────────
 init();
