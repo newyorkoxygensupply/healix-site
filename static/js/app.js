@@ -223,14 +223,25 @@ function bindEvents() {
   });
 
   // Sidebar toggle
+  function closeMobileSidebar() {
+    $('sidebar').classList.remove('mobile-open');
+    const bd = $('sidebarBackdrop');
+    if (bd) bd.classList.remove('visible');
+    document.body.style.overflow = '';
+  }
   $('sidebarToggle').addEventListener('click', () => {
     const sidebar = $('sidebar');
+    const bd      = $('sidebarBackdrop');
     if (window.innerWidth <= 900) {
-      sidebar.classList.toggle('mobile-open');
+      const isOpen = sidebar.classList.toggle('mobile-open');
+      if (bd) bd.classList.toggle('visible', isOpen);
+      document.body.style.overflow = isOpen ? 'hidden' : '';
     } else {
       sidebar.classList.toggle('collapsed');
     }
   });
+  const _bd = $('sidebarBackdrop');
+  if (_bd) _bd.addEventListener('click', closeMobileSidebar);
 
   // View toggle
   $('gridView').addEventListener('click', () => setView('grid'));
