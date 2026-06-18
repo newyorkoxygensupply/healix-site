@@ -442,8 +442,9 @@ function renderProducts(products) {
       <div class="product-card" style="animation-delay:${delay}ms" onclick="openProduct('${p.product_id}')">
       <a href="${productHref}" class="card-seo-link" aria-label="${escHtml(p.product_name)}" tabindex="-1"></a>
         <div class="card-img">
-          <img src="${getProductImageUrl(p.category, p.product_id)}" alt="${escHtml(p.product_name)}"
-               onerror="this.onerror=null;this.src='/api/catimg/patient-care/0'">
+          <img src="${p.image_url_1 || getProductImageUrl(p.category, p.product_id)}"
+               alt="${escHtml(p.product_name)}" loading="lazy"
+               onerror="this.onerror=null;this.src='${getProductImageUrl(p.category, p.product_id)}'">
           <div class="img-placeholder" style="display:none">${emoji}</div>
           <span class="card-badge ${badgeCls}">${badgeTxt}</span>
         </div>
