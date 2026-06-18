@@ -132,6 +132,22 @@ function getPlaceholder(category) {
   return CAT_EMOJI[category] || '⚕️';
 }
 
+// 3-tier image fallback: img-proxy → Pexels → inline SVG
+// Uses a step counter so there's no URL-comparison bug.
+function imgFallback(el) {
+  var step = parseInt(el.dataset.fbStep || '0', 10);
+  if (step === 0) {
+    el.dataset.fbStep = '1';
+    el.src = el.dataset.px;   // try Pexels category photo
+  } else if (step === 1) {
+    el.dataset.fbStep = '2';
+    el.src = el.dataset.sv;   // try server SVG
+  } else {
+    el.onerror = null;
+    el.src = getPlaceholderSVG(el.dataset.cat || '', el.dataset.br || '');  // inline SVG — always works
+  }
+}
+
 // ── SEO: History API URL + dynamic title ──────────────────────────────────────
 const SITE_NAME = window.SITE_NAME || document.title.split('|').pop().trim();
 
@@ -468,8 +484,9 @@ function renderProducts(products) {
         <div class="card-img">
           <img src="${_imgSrc}"
                data-px="${_pxUrl}" data-sv="${_svgUrl}"
+               data-cat="${escHtml(p.category)}" data-br="${escHtml(p.brand)}"
                alt="" role="presentation" loading="lazy"
-               onerror="var s=this;if(s.src!==s.dataset.px){s.src=s.dataset.px}else{s.onerror=null;s.src=s.dataset.sv}">
+               onerror="imgFallback(this)">
           <div class="img-placeholder" style="display:none">${emoji}</div>
           <span class="card-badge ${badgeCls}">${badgeTxt}</span>
         </div>
