@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <rect width="320" height="320" fill="#ede9fe"/>
+  <rect x="16" y="16" width="288" height="288" rx="16" fill="#e3dff3"/>
+  <!-- Product icon -->
+  <g transform="translate(0,10)" stroke="#501da0" stroke-width="8"
+     stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M130 110 C110 110 100 122 100 135 L100 185 C100 198 110 205 130 205 L190 205 C210 205 220 198 220 185 L220 135 C220 122 210 110 190 110Z M160 130 C147 130 137 140 137 153 C137 166 147 176 160 176 C173 176 183 166 183 153 C183 140 173 130 160 130Z"/>
+  </g>
+  <!-- Label bar -->
+  <rect x="0" y="264" width="320" height="56" fill="#5b21b6" opacity="0.10"/>
+  <rect x="0" y="264" width="320" height="3" fill="#5b21b6" opacity="0.20"/>
+  <text x="160" y="288" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="#5b21b6"
+        text-anchor="middle" dominant-baseline="middle">Diagnostic Equip.</text>
+  <text x="160" y="307" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="#5b21b6" opacity="0.55"
+        text-anchor="middle" dominant-baseline="middle">Clinical Grade · Trusted Brands</text>
+</svg>

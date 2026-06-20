@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <rect width="320" height="320" fill="#cffafe"/>
+  <rect x="16" y="16" width="288" height="288" rx="16" fill="#c6f0f3"/>
+  <!-- Product icon -->
+  <g transform="translate(0,10)" stroke="#0c667e" stroke-width="8"
+     stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M160 95 L160 130 M160 130 C140 130 120 142 120 165 C120 188 140 198 160 198 M160 130 C180 130 200 142 200 165 C200 188 180 198 160 198"/>
+  </g>
+  <!-- Label bar -->
+  <rect x="0" y="264" width="320" height="56" fill="#0e7490" opacity="0.10"/>
+  <rect x="0" y="264" width="320" height="3" fill="#0e7490" opacity="0.20"/>
+  <text x="160" y="288" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="#0e7490"
+        text-anchor="middle" dominant-baseline="middle">Respiratory</text>
+  <text x="160" y="307" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="#0e7490" opacity="0.55"
+        text-anchor="middle" dominant-baseline="middle">Clinical Grade · Trusted Brands</text>
+</svg>

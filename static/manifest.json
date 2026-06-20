@@ -1,0 +1,13 @@
+{
+  "name": "Healix",
+  "short_name": "Healix",
+  "description": "Healix — 298,000 clinical-grade medical supplies",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F7F6F3",
+  "theme_color": "#1a56db",
+  "icons": [
+    { "src": "/static/img/favicon.png", "sizes": "32x32",   "type": "image/png" },
+    { "src": "/static/img/favicon.svg", "sizes": "any",     "type": "image/svg+xml" }
+  ]
+}

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <rect width="320" height="320" fill="#ffedd5"/>
+  <rect x="16" y="16" width="288" height="288" rx="16" fill="#f4e3cc"/>
+  <!-- Product icon -->
+  <g transform="translate(0,10)" stroke="#aa390a" stroke-width="8"
+     stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M110 110 C100 105 95 95 100 85 C105 75 118 75 125 82 L195 155 C202 163 203 176 196 183 C189 190 176 189 170 181 L110 110Z M120 80 C128 88 126 98 119 103 M196 163 C189 168 180 166 175 160"/>
+  </g>
+  <!-- Label bar -->
+  <rect x="0" y="264" width="320" height="56" fill="#c2410c" opacity="0.10"/>
+  <rect x="0" y="264" width="320" height="3" fill="#c2410c" opacity="0.20"/>
+  <text x="160" y="288" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="#c2410c"
+        text-anchor="middle" dominant-baseline="middle">Orthopedic & Rehab</text>
+  <text x="160" y="307" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="#c2410c" opacity="0.55"
+        text-anchor="middle" dominant-baseline="middle">Clinical Grade · Trusted Brands</text>
+</svg>

@@ -3,14 +3,11 @@ Healix — Production Flask backend (Exhaustive SEO Edition) — SQLite build
 """
 import os, re, math, hashlib, logging, json, threading, urllib.parse, urllib.request, urllib.error
 import sqlite3
-from collections import defaultdict
 from datetime import date
 from pathlib import Path
 from dotenv import load_dotenv
 from flask import Flask, jsonify, request, render_template, Response, redirect
 from flask_compress import Compress
-from blog_data import BLOGS
-from city_data import CITIES, CITY_BY_SLUG
 
 # ── Config ─────────────────────────────────────────────────────────────────────
 load_dotenv()
@@ -19,14 +16,10 @@ BASE_DIR       = Path(__file__).parent
 DB_PATH        = Path(os.getenv("DB_PATH", BASE_DIR / "medical_supplies.db"))
 IMG_CACHE      = BASE_DIR / ".img_cache"
 IMG_CACHE.mkdir(exist_ok=True)
-SITE_URL       = os.getenv("SITE_URL", "https://healixmedicalsupply.com").rstrip("/")
+SITE_URL       = os.getenv("SITE_URL", "http://localhost:8080").rstrip("/")
 SITE_NAME      = os.getenv("SITE_NAME", "Healix")
 PEXELS_API_KEY = os.getenv("PEXELS_API_KEY", "")
-GROQ_API_KEY   = os.getenv("GROQ_API_KEY", "")
 TODAY          = date.today().isoformat()
-
-# ── Blog data ──────────────────────────────────────────────────────────────────
-BLOG_BY_SLUG = {b["slug"]: b for b in BLOGS}
 
 logging.basicConfig(
     level=getattr(logging, os.getenv("LOG_LEVEL", "INFO").upper(), logging.INFO),
@@ -79,25 +72,11 @@ def get_db() -> sqlite3.Connection:
     return _db_local.conn
 
 # ── Startup — load navigation data (tiny) ─────────────────────────────────────
-log.info("Connecting to %s …", DB_PATH)
+log.info("Connecting to %s ...", DB_PATH)
 _boot = sqlite3.connect(str(DB_PATH))
 _boot.row_factory = sqlite3.Row
 
 TOTAL = _boot.execute("SELECT COUNT(*) FROM products").fetchone()[0]
-
-# Create inquiries table if not exists
-_boot.execute("""CREATE TABLE IF NOT EXISTS inquiries (
-    id            INTEGER PRIMARY KEY AUTOINCREMENT,
-    product_id    TEXT,
-    product_name  TEXT,
-    brand         TEXT,
-    customer_name TEXT,
-    phone         TEXT,
-    email         TEXT,
-    message       TEXT,
-    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-)""")
-_boot.commit()
 
 CATEGORIES: dict[str, list[str]] = {}
 for _r in _boot.execute(
@@ -200,10 +179,10 @@ CAT_SEO = {
              "offer excellent chemical resistance, and are comparable in tactile sensitivity to latex. Many facilities have "
              "transitioned entirely to nitrile."),
             ("What thickness should I choose for exam gloves?",
-             "For standard examinations, 3.0–4.5 mil thickness provides adequate protection. For chemotherapy drug handling "
-             "or heavy chemical exposure, choose 5.0 mil or higher. Surgical gloves are typically 6.0–8.5 mil."),
+             "For standard examinations, 3.0-4.5 mil thickness provides adequate protection. For chemotherapy drug handling "
+             "or heavy chemical exposure, choose 5.0 mil or higher. Surgical gloves are typically 6.0-8.5 mil."),
             ("Can I buy medical gloves in bulk?",
-             "Yes. Healix offers gloves by the box (50–300 count) and by the case (4–10 boxes). Bulk pricing is available "
+             "Yes. Healix offers gloves by the box (50-300 count) and by the case (4-10 boxes). Bulk pricing is available "
              "for facilities purchasing 10+ cases."),
         ],
     },
@@ -222,7 +201,7 @@ CAT_SEO = {
              "hydrogel dressings rehydrate dry wounds. Consult your clinician for a wound-specific protocol."),
             ("How often should wound dressings be changed?",
              "Dressing change frequency depends on wound type and exudate level. Lightly exuding wounds may require changes "
-             "every 3–7 days; heavily exuding wounds may require daily changes. Follow manufacturer guidance and clinical protocols."),
+             "every 3-7 days; heavily exuding wounds may require daily changes. Follow manufacturer guidance and clinical protocols."),
             ("What is the difference between sterile and non-sterile wound dressings?",
              "Sterile dressings are individually packaged and required for open wounds, surgical sites, and burns. "
              "Non-sterile dressings are suitable for intact skin or heavily colonized wounds where sterility is not critical."),
@@ -233,7 +212,7 @@ CAT_SEO = {
         "intro": ("Healix is your source for professional respiratory care equipment and disposables. Our catalog includes "
                   "home and portable oxygen concentrators, CPAP and BiPAP machines, ICU and portable ventilators, "
                   "nebulizers, suction catheters, tracheostomy supplies, nasal cannulas, and oxygen masks from brands "
-                  "including ResMed, Philips Respironics, Inogen, DeVilbiss, CAIRE, Dräger, Medtronic, and Hamilton Medical."),
+                  "including ResMed, Philips Respironics, Inogen, DeVilbiss, CAIRE, Drager, Medtronic, and Hamilton Medical."),
         "keywords": ["oxygen concentrator", "CPAP machine", "BiPAP machine", "ventilator", "portable oxygen concentrator",
                      "home oxygen therapy", "respiratory supplies", "nasal cannula", "nebulizer"],
         "faq": [
@@ -248,7 +227,7 @@ CAT_SEO = {
              "(pulse vs continuous), and FAA approval status."),
             ("How do home oxygen concentrators work?",
              "Home oxygen concentrators draw in room air, pass it through a molecular sieve (zeolite), and separate oxygen "
-             "from nitrogen to deliver 90–96% pure oxygen. They run continuously on household current and eliminate the need "
+             "from nitrogen to deliver 90-96% pure oxygen. They run continuously on household current and eliminate the need "
              "for oxygen cylinders."),
             ("Do I need a prescription for a home oxygen concentrator?",
              "Yes. Oxygen concentrators are Class II medical devices that require a prescription from a licensed physician. "
@@ -279,7 +258,7 @@ CAT_SEO = {
         "intro": ("Healix supplies operating rooms and surgical suites with the full spectrum of sterile surgical supplies. "
                   "Our 22,000+ OR products include sutures, surgical gowns, procedure drapes, electrosurgical devices, "
                   "sponges, instrument trays, skin closure products, and hemostatic agents from Kimberly-Clark, Halyard, "
-                  "Cardinal Health, Medline, Ethicon, and Mölnlycke."),
+                  "Cardinal Health, Medline, Ethicon, and Molnlycke."),
         "keywords": ["surgical supplies", "OR supplies", "sutures", "surgical drapes", "surgical gowns",
                      "electrosurgical", "hemostatic agents", "surgical instruments"],
         "faq": [
@@ -321,7 +300,7 @@ CAT_SEO = {
              "Surgical masks are fluid-resistant barriers that protect against droplets but do not provide the same "
              "level of airborne particle filtration. N95s require a fit test for proper protection."),
             ("Are KN95 masks equivalent to N95?",
-             "KN95 masks meet Chinese GB2626 standards and are designed to filter ≥95% of particles, but they are not "
+             "KN95 masks meet Chinese GB2626 standards and are designed to filter 95%+ of particles, but they are not "
              "NIOSH-certified. For healthcare settings, NIOSH-approved N95 respirators are the required standard."),
         ],
     },
@@ -350,8 +329,8 @@ CAT_SEO = {
                      "walking boot", "rehabilitation supplies", "cervical collar"],
         "faq": [
             ("What compression level is recommended for DVT prevention?",
-             "For DVT prophylaxis, graduated compression stockings of 15–20 mmHg or 20–30 mmHg are commonly used. "
-             "Anti-embolism stockings (8–18 mmHg) are used for non-ambulatory patients. Always confirm with physician "
+             "For DVT prophylaxis, graduated compression stockings of 15-20 mmHg or 20-30 mmHg are commonly used. "
+             "Anti-embolism stockings (8-18 mmHg) are used for non-ambulatory patients. Always confirm with physician "
              "guidance for specific patient populations."),
         ],
     },
@@ -389,7 +368,7 @@ CAT_SEO = {
         "headline": "Medical Nutrition — Enteral Formulas, Oral Supplements & Feeding Supplies",
         "intro": ("Healix stocks clinical nutrition products for patients requiring supplemental or complete nutritional "
                   "support. Our catalog includes tube feeding formulas, oral nutritional supplements, enteral feeding "
-                  "pumps and sets, and thickening agents from Abbott (Ensure, Jevity), Nestlé Health Science "
+                  "pumps and sets, and thickening agents from Abbott (Ensure, Jevity), Nestle Health Science "
                   "(Peptamen), Kate Farms, and Nestle Nutren."),
         "keywords": ["enteral nutrition", "tube feeding", "oral supplements", "Ensure", "Jevity",
                      "enteral formula", "medical nutrition"],
@@ -474,8 +453,8 @@ CAT_SEO = {
              "from the pouch, allowing pouch changes without removing the barrier — beneficial for skin integrity "
              "and convenience for active patients."),
             ("How often should an ileostomy pouch be changed?",
-             "One-piece pouches are typically changed every 1–3 days. Two-piece system barriers can last 3–5 days "
-             "with pouch changes as needed (usually every 1–2 days). Change frequency depends on the seal integrity, "
+             "One-piece pouches are typically changed every 1-3 days. Two-piece system barriers can last 3-5 days "
+             "with pouch changes as needed (usually every 1-2 days). Change frequency depends on the seal integrity, "
              "skin condition, and output characteristics."),
             ("What brands of ileostomy supplies does Healix carry?",
              "Healix carries products from all major ostomy manufacturers including Coloplast (SenSura Mio, Assura, Brava), "
@@ -502,7 +481,7 @@ BRAND_SEO = {
     "Ansell": "Ansell is a global leader in protection solutions for healthcare, specializing in surgical gloves, exam gloves, and specialty protective products.",
     "Cardinal Health": "Cardinal Health is a global healthcare services company providing pharmaceutical and medical supply distribution, manufacturing, and consulting services.",
     "Medtronic": "Medtronic is the world's largest medical device company, manufacturing products across cardiac, neurological, diabetes, and surgical care specialties.",
-    "Dräger": "Dräger is a leading international company in the fields of medical and safety technology, known for anesthesia workstations, ventilators, and patient monitoring.",
+    "Drager": "Drager is a leading international company in the fields of medical and safety technology, known for anesthesia workstations, ventilators, and patient monitoring.",
     "Hamilton Medical": "Hamilton Medical is a Swiss medical device company specializing in intelligent ventilation solutions for ICU and transport settings.",
     "Dynarex": "Dynarex Corporation is a leading manufacturer of disposable medical products serving hospitals, nursing homes, physicians, and consumers.",
     "McKesson": "McKesson Corporation is a healthcare distribution company providing pharmaceutical, medical supply distribution, and health information technology.",
@@ -539,210 +518,6 @@ CAT_RELATED = {
     "Urology & Ostomy":    ["Skin Care", "Patient Care", "Incontinence", "Lab Supplies"],
 }
 
-# ── Smart Search Engine ────────────────────────────────────────────────────────
-# Maps medical terms/phrases → category (longest match wins)
-_TERM_TO_CAT = {
-    # Gloves
-    "nitrile glove":"Gloves","latex glove":"Gloves","exam glove":"Gloves",
-    "surgical glove":"Gloves","disposable glove":"Gloves","vinyl glove":"Gloves",
-    "chemotherapy glove":"Gloves","chemo glove":"Gloves","nitrile":"Gloves",
-    # Wound Care
-    "wound dressing":"Wound Care","dressing change":"Wound Care","wound care":"Wound Care",
-    "hydrocolloid":"Wound Care","alginate dressing":"Wound Care","foam dressing":"Wound Care",
-    "compression bandage":"Wound Care","elastic bandage":"Wound Care","wound vac":"Wound Care",
-    "npwt":"Wound Care","gauze":"Wound Care","bandage":"Wound Care","suture":"Wound Care",
-    "wound closure":"Wound Care","antimicrobial dressing":"Wound Care","wound":"Wound Care",
-    # Urology & Ostomy
-    "foley catheter":"Urology & Ostomy","urinary catheter":"Urology & Ostomy",
-    "colostomy":"Urology & Ostomy","ileostomy":"Urology & Ostomy","urostomy":"Urology & Ostomy",
-    "ostomy pouch":"Urology & Ostomy","ostomy bag":"Urology & Ostomy","ostomy":"Urology & Ostomy",
-    "intermittent catheter":"Urology & Ostomy","urinary bag":"Urology & Ostomy",
-    "catheter":"Urology & Ostomy","condom catheter":"Urology & Ostomy",
-    # Respiratory
-    "oxygen concentrator":"Respiratory","portable oxygen":"Respiratory","home oxygen":"Respiratory",
-    "cpap machine":"Respiratory","bipap machine":"Respiratory","cpap":"Respiratory",
-    "bipap":"Respiratory","nebulizer":"Respiratory","ventilator":"Respiratory",
-    "tracheostomy":"Respiratory","nasal cannula":"Respiratory","oxygen mask":"Respiratory",
-    "aerosol mask":"Respiratory","suction catheter":"Respiratory","oxygen":"Respiratory",
-    # Diagnostic Equipment
-    "pulse oximeter":"Diagnostic Equipment","blood pressure monitor":"Diagnostic Equipment",
-    "stethoscope":"Diagnostic Equipment","thermometer":"Diagnostic Equipment",
-    "glucometer":"Diagnostic Equipment","blood glucose monitor":"Diagnostic Equipment",
-    "otoscope":"Diagnostic Equipment","ophthalmoscope":"Diagnostic Equipment",
-    "ecg machine":"Diagnostic Equipment","ekg":"Diagnostic Equipment",
-    "sphygmomanometer":"Diagnostic Equipment","exam light":"Diagnostic Equipment",
-    # PPE
-    "n95 mask":"PPE","kn95":"PPE","surgical mask":"PPE","procedure mask":"PPE",
-    "isolation gown":"PPE","face shield":"PPE","safety glasses":"PPE",
-    "protective coverall":"PPE","n95":"PPE","ppe":"PPE","face mask":"PPE",
-    # IV & Vascular Access
-    "picc line":"IV & Vascular Access","iv catheter":"IV & Vascular Access",
-    "iv tubing":"IV & Vascular Access","iv bag":"IV & Vascular Access",
-    "saline flush":"IV & Vascular Access","butterfly needle":"IV & Vascular Access",
-    "blood collection":"IV & Vascular Access","vacutainer":"IV & Vascular Access",
-    "tourniquet":"IV & Vascular Access","syringe":"IV & Vascular Access",
-    "hypodermic needle":"IV & Vascular Access","needle":"IV & Vascular Access",
-    "intravenous":"IV & Vascular Access","iv set":"IV & Vascular Access",
-    # Orthopedic & Rehab
-    "knee brace":"Orthopedic & Rehab","ankle brace":"Orthopedic & Rehab",
-    "wrist brace":"Orthopedic & Rehab","back brace":"Orthopedic & Rehab",
-    "cervical collar":"Orthopedic & Rehab","splint":"Orthopedic & Rehab",
-    "compression stocking":"Orthopedic & Rehab","ted hose":"Orthopedic & Rehab",
-    "ace bandage":"Orthopedic & Rehab","compression sleeve":"Orthopedic & Rehab",
-    "brace":"Orthopedic & Rehab","orthopedic":"Orthopedic & Rehab",
-    "physical therapy":"Orthopedic & Rehab","rehab":"Orthopedic & Rehab",
-    # Incontinence
-    "adult diaper":"Incontinence","adult brief":"Incontinence","pull-up brief":"Incontinence",
-    "underpads":"Incontinence","chux pad":"Incontinence","incontinence pad":"Incontinence",
-    "bladder control":"Incontinence","absorbent pad":"Incontinence","poise":"Incontinence",
-    "incontinence":"Incontinence",
-    # Patient Care
-    "bedpan":"Patient Care","urinal":"Patient Care","emesis basin":"Patient Care",
-    "patient lift":"Patient Care","transfer belt":"Patient Care","gait belt":"Patient Care",
-    "call light":"Patient Care","bedrail":"Patient Care",
-    # Mobility & DME
-    "wheelchair":"Mobility & DME","power wheelchair":"Mobility & DME",
-    "rollator":"Mobility & DME","walker":"Mobility & DME","crutch":"Mobility & DME",
-    "quad cane":"Mobility & DME","transport chair":"Mobility & DME",
-    "knee scooter":"Mobility & DME","lift chair":"Mobility & DME","dme":"Mobility & DME",
-    "cane":"Mobility & DME",
-    # Skin Care
-    "skin barrier cream":"Skin Care","moisture barrier":"Skin Care","skin protectant":"Skin Care",
-    "barrier cream":"Skin Care","skin lotion":"Skin Care","wound cream":"Skin Care",
-    "skin care":"Skin Care",
-    # Lab Supplies
-    "test tube":"Lab Supplies","specimen container":"Lab Supplies","culture tube":"Lab Supplies",
-    "petri dish":"Lab Supplies","pipette":"Lab Supplies","microscope slide":"Lab Supplies",
-    "lab coat":"Lab Supplies","specimen bag":"Lab Supplies","centrifuge tube":"Lab Supplies",
-    # OR & Surgery
-    "surgical drape":"OR & Surgery","sterile drape":"OR & Surgery","operating room":"OR & Surgery",
-    "scalpel":"OR & Surgery","retractor":"OR & Surgery","surgical forcep":"OR & Surgery",
-    "surgical instrument":"OR & Surgery","mayo stand":"OR & Surgery",
-    # Nutrition
-    "enteral feeding":"Nutrition","feeding tube":"Nutrition","g-tube":"Nutrition",
-    "ng tube":"Nutrition","nasogastric":"Nutrition","tube feeding":"Nutrition",
-    "enteral formula":"Nutrition","parenteral nutrition":"Nutrition","tpn":"Nutrition",
-    # First Aid
-    "first aid kit":"First Aid","adhesive bandage":"First Aid","band-aid":"First Aid",
-    "antiseptic wipe":"First Aid","hydrogen peroxide":"First Aid","iodine":"First Aid",
-    "first aid":"First Aid",
-    # Dental
-    "dental mirror":"Dental","dental probe":"Dental","dental supply":"Dental",
-    "oral care":"Dental","toothbrush":"Dental","dental":"Dental",
-    # Pediatric
-    "neonatal":"Pediatric","pediatric catheter":"Pediatric","infant supply":"Pediatric",
-    "pediatric":"Pediatric","infant":"Pediatric","newborn":"Pediatric",
-    # Pharmacy
-    "prescription bag":"Pharmacy","pill counter":"Pharmacy","medication cup":"Pharmacy",
-    "dispensing":"Pharmacy","pharmacy":"Pharmacy",
-    # Textiles
-    "hospital gown":"Textiles","patient gown":"Textiles","scrub uniform":"Textiles",
-    "surgical gown":"Textiles","scrubs":"Textiles","lab coat":"Lab Supplies",
-    "bed pad":"Textiles","draw sheet":"Textiles",
-}
-
-# FTS synonym expansion (term → extra keywords to add to FTS query)
-_SYNONYMS = {
-    "wound":       "dressing bandage gauze wound care",
-    "glove":       "exam glove surgical glove nitrile",
-    "diaper":      "brief incontinence pull-up adult",
-    "cpap":        "cpap mask cpap machine sleep apnea",
-    "oxygen":      "oxygen concentrator portable oxygen",
-    "foley":       "foley catheter urinary catheter",
-    "iv":          "intravenous catheter vascular",
-    "brace":       "orthopedic brace support splint",
-    "mask":        "face mask surgical mask procedure",
-    "syringe":     "syringe needle injection",
-    "stethoscope": "stethoscope auscultation cardiac",
-    "wheelchair":  "wheelchair mobility transport chair",
-    "walker":      "walker rollator mobility aid",
-    "dressing":    "dressing bandage wound care gauze",
-    "compression": "compression stocking ted hose elastic",
-    "catheter":    "catheter urinary foley",
-    "ostomy":      "ostomy pouch colostomy ileostomy",
-    "nebulizer":   "nebulizer inhaler aerosol mask",
-    "feeding":     "feeding tube enteral nutrition",
-    "suture":      "suture wound closure staple",
-    "gown":        "isolation gown patient gown surgical",
-    "splint":      "splint brace orthopedic immobilizer",
-}
-
-def _smart_parse(query: str) -> dict:
-    """Parse a natural language medical supply query into structured search params."""
-    q_lo = query.lower().strip()
-    result: dict = {}
-
-    # 1. Category — longest matching term wins
-    best_term, best_cat = "", ""
-    for term, cat in _TERM_TO_CAT.items():
-        if term in q_lo and len(term) > len(best_term):
-            best_term, best_cat = term, cat
-    if best_cat:
-        result["category"] = best_cat
-
-    # 2. Properties
-    if re.search(r'\b(sterile|sterilized|sterility)\b', q_lo):
-        result["sterile"] = "Yes"
-    if re.search(r'\b(latex.?free|non.?latex|latex allergy|nitrile)\b', q_lo):
-        result["latex_free"] = "Yes"
-
-    # 3. Price range
-    m_max = re.search(r'(?:under|less than|below|max(?:imum)?|no more than)\s*\$?\s*(\d+(?:\.\d+)?)', q_lo)
-    if m_max:
-        result["max_price"] = str(int(float(m_max.group(1))))
-    elif re.search(r'\b(cheap|budget|affordable|economy|low.?cost|inexpensive)\b', q_lo):
-        result["max_price"] = "30"
-    m_min = re.search(r'(?:over|more than|above|at least|minimum|min)\s*\$?\s*(\d+(?:\.\d+)?)', q_lo)
-    if m_min:
-        result["min_price"] = str(int(float(m_min.group(1))))
-
-    # 4. Brand detection
-    for brand in BRANDS:
-        if brand.lower() in q_lo:
-            result["brand"] = brand
-            break
-
-    # 5. Clean query — strip structural words already extracted
-    clean = q_lo
-    for pat in [
-        r'(?:under|less than|below|max(?:imum)?|no more than|over|above|at least|minimum)\s*\$?\s*\d+',
-        r'\b(?:sterile|latex.?free|non.?latex|cheap|budget|affordable|economy|inexpensive|low.?cost)\b',
-        r'\b(?:i need|looking for|find me|show me|do you have|where can i|buy|order|get)\b',
-    ]:
-        clean = re.sub(pat, '', clean)
-    if result.get("brand"):
-        clean = clean.replace(result["brand"].lower(), '')
-    clean = ' '.join(clean.split())
-
-    # 6. Synonym expansion on cleaned query
-    expanded_terms = set(clean.split())
-    for kw, expansion in _SYNONYMS.items():
-        if kw in clean:
-            expanded_terms.update(expansion.split())
-    result["q"] = ' '.join(expanded_terms) if expanded_terms else ''
-
-    # 7. Human-readable interpretation
-    parts = []
-    if best_term:
-        parts.append(best_term.title())
-    elif clean:
-        parts.append(f'"{clean}"')
-    if result.get("brand"):
-        parts.append(f"Brand: {result['brand']}")
-    if result.get("category") and not best_term:
-        parts.append(result["category"])
-    if result.get("sterile"):
-        parts.append("sterile")
-    if result.get("latex_free"):
-        parts.append("latex-free")
-    if result.get("max_price"):
-        parts.append(f"under ${result['max_price']}")
-    if result.get("min_price"):
-        parts.append(f"over ${result['min_price']}")
-    result["interpretation"] = " · ".join(parts) if parts else query
-
-    return result
-
 # ── Helpers ────────────────────────────────────────────────────────────────────
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 
@@ -767,7 +542,7 @@ def _summary(p: dict) -> dict:
         "sku":               p.get("sku",""),
         "price_each":        p.get("price_each",""),
         "price_case":        p.get("price_case",""),
-        "availability":      "In Stock",
+        "availability":      p.get("availability",""),
         "image_url_1":       _proxy_img(p.get("image_url_1","")),
         "size":              p.get("size",""),
         "color":             p.get("color",""),
@@ -779,20 +554,16 @@ def _summary(p: dict) -> dict:
     }
 
 def _seo_product_title(p: dict) -> str:
-    name   = p.get('product_name', '')
-    brand  = p.get('brand', '')
-    suffix = f" | {brand} | {SITE_NAME}"
-    # Keep title ≤ ~70 chars for clean Google display
-    max_name = max(70 - len(suffix), 20)
-    if len(name) > max_name:
-        name = name[:max_name].rsplit(' ', 1)[0].rstrip()
-    return f"{name}{suffix}"
+    return (f"{p['product_name']} — {p['brand']} | "
+            f"{p.get('subcategory') or p['category']} | {SITE_NAME}")
 
 def _seo_product_desc(p: dict) -> str:
     desc  = (p.get("description") or "").strip()
     price = p.get("price_each","")
+    avail = p.get("availability","")
     brand = p.get("brand","")
-    base  = f"Buy {p['product_name']} by {brand}. {price} — In Stock."
+    base  = f"Buy {p['product_name']} by {brand}. {price}"
+    if avail: base += f" — {avail}."
     if desc:
         remaining = 155 - len(base) - 1
         if remaining > 30:
@@ -800,28 +571,18 @@ def _seo_product_desc(p: dict) -> str:
     return base[:155]
 
 def _seo_cat_title(cat, sub=None, total=0):
-    total_str = f"{round(total/1000)*1000:,}+" if total >= 1000 else f"{total:,}"
     if sub:
-        return f"Buy {sub} Supplies Online | {cat} | {SITE_NAME} — {total_str} Products"
-    return f"Buy {cat} Medical Supplies Online | {total_str} Products | {SITE_NAME}"
+        return f"Buy {sub} Online | {cat} Supplies | {SITE_NAME} — {total:,} Products"
+    return f"Buy {cat} Medical Supplies Online | {SITE_NAME} — {total:,} Products"
 
 def _seo_cat_desc(cat, sub=None, total=0):
     kws    = CAT_SEO.get(cat, {}).get("keywords", [])
-    kw_str = ", ".join(kws[:4]) if kws else f"{cat.lower()} supplies"
-    total_str = f"{round(total/1000)*1000:,}+" if total >= 1000 else f"{total:,}"
+    kw_str = ", ".join(kws[:3]) if kws else f"{cat.lower()} supplies"
     if sub:
-        return (f"Shop {total_str} {sub} products online. Browse {kw_str}. "
-                f"Clinical-grade quality, bulk pricing, fast shipping. — {SITE_NAME}")
-    return (f"Shop {total_str} {cat} medical supplies online. Includes {kw_str}. "
-            f"Trusted brands, bulk pricing for healthcare facilities, fast shipping. — {SITE_NAME}")
-
-# ── Google site verification ───────────────────────────────────────────────────
-@app.route("/googlee5995f15af11c811.html")
-def google_verification():
-    return Response(
-        "google-site-verification: googlee5995f15af11c811.html",
-        mimetype="text/html"
-    )
+        return (f"Shop {total:,} {sub} products online. {kw_str}. "
+                f"Clinical-grade quality from trusted brands. Fast shipping. — {SITE_NAME}")
+    return (f"Shop {total:,} {cat} medical supplies online. {kw_str}. "
+            f"Trusted brands, competitive pricing, fast shipping. — {SITE_NAME}")
 
 # ── Main page ──────────────────────────────────────────────────────────────────
 @app.route("/")
@@ -829,11 +590,11 @@ def index():
     top_cats = list(CATEGORIES.keys())[:8]
     return render_template("index.html",
         site_name=SITE_NAME, site_url=SITE_URL,
-        title=f"Medical Supplies Online — 500,000+ Clinical-Grade Products | {SITE_NAME}",
+        title=f"Medical Supplies Online | Buy {SITE_NAME} — {TOTAL:,}+ Clinical-Grade Products",
         description=(
-            "Shop 500,000+ clinical-grade medical supplies at Healix Medical Supply. "
+            f"Shop {TOTAL:,}+ clinical-grade medical supplies at {SITE_NAME}. "
             "Gloves, wound care, oxygen concentrators, CPAP machines, ostomy supplies, PPE, "
-            "IV supplies & more. Bulk pricing for healthcare facilities. Fast shipping."
+            "IV supplies & more. Trusted brands, fast shipping."
         ),
         canonical=SITE_URL + "/",
         og_image=SITE_URL + "/static/img/og-default.jpg",
@@ -853,7 +614,6 @@ def product_page(product_id, slug=None):
         return render_template("404.html", site_name=SITE_NAME, site_url=SITE_URL,
                                title="Product Not Found"), 404
     p = dict(row)
-    p["availability"] = "In Stock"
 
     canonical_slug = slugify(p["product_name"])
     if slug != canonical_slug:
@@ -909,7 +669,11 @@ def product_page(product_id, slug=None):
     breadcrumbs.append({"name":p["product_name"],
                         "url":f"{SITE_URL}/p/{product_id}/{canonical_slug}"})
 
-    avail_schema = "http://schema.org/InStock"
+    avail_schema = ("http://schema.org/InStock"
+                    if p.get("availability") == "In Stock"
+                    else "http://schema.org/LimitedAvailability"
+                    if "Limited" in p.get("availability","")
+                    else "http://schema.org/OutOfStock")
 
     brand_desc = BRAND_SEO.get(p.get("brand",""), "")
     brand_slug = slugify(p.get("brand",""))
@@ -945,7 +709,6 @@ def category_page(cat_slug, sub_slug=None):
     total, preview_rows = _query(category=cat, subcategory=sub or "", limit=24)
     preview = [_summary(r) for r in preview_rows]
 
-    # Top brands in this category (SQL GROUP BY — no full scan needed)
     top_brand_rows = get_db().execute(
         "SELECT brand, COUNT(*) as cnt FROM products "
         "WHERE category = ? AND brand != '' GROUP BY brand ORDER BY cnt DESC LIMIT 8",
@@ -1051,27 +814,6 @@ def meta():
     resp.headers["Cache-Control"] = "public, max-age=300"
     return resp
 
-@app.route("/api/category-content/<cat_slug>")
-def category_content(cat_slug):
-    """Exposes the same CAT_SEO/CAT_RELATED editorial content the Jinja
-    category page already renders (headline, intro, keywords, FAQ, related
-    categories), as JSON, so the Next.js frontend's category PLP can ship
-    real FAQ schema instead of inventing content. Read-only, no DB query."""
-    cat = next((c for c in CATEGORIES if slugify(c) == cat_slug), None)
-    if not cat:
-        return jsonify({"error": "Category not found"}), 404
-    seo = CAT_SEO.get(cat, {})
-    resp = jsonify({
-        "category": cat,
-        "headline": seo.get("headline", f"{cat} Medical Supplies"),
-        "intro": seo.get("intro", ""),
-        "keywords": seo.get("keywords", []),
-        "faq": seo.get("faq", []),
-        "related": CAT_RELATED.get(cat, []),
-    })
-    resp.headers["Cache-Control"] = "public, max-age=3600"
-    return resp
-
 @app.route("/api/products")
 def products():
     q           = request.args.get("q","").strip()
@@ -1105,140 +847,6 @@ def products():
         "products":[_summary(r) for r in rows],
     })
 
-@app.route("/api/ai-search", methods=["POST"])
-def ai_search():
-    """Smart natural-language product search (no external API required)."""
-    data  = request.get_json(silent=True) or {}
-    query = (data.get("q") or "").strip()
-    if not query:
-        return jsonify({"error": "No query"}), 400
-
-    params         = _smart_parse(query)
-    interpretation = params.pop("interpretation", query)
-
-    total, rows = _query(
-        category  = params.get("category", ""),
-        brand     = params.get("brand", ""),
-        q         = params.get("q", query),
-        min_price = params.get("min_price", ""),
-        max_price = params.get("max_price", ""),
-        latex_free= params.get("latex_free", ""),
-        sterile   = params.get("sterile", ""),
-        limit     = 24,
-    )
-    total_pages = max(1, -(-total // 24))
-    return jsonify({
-        "ai":             True,
-        "interpretation": interpretation,
-        "params":         {k: v for k, v in params.items() if v},
-        "total":          total,
-        "total_pages":    total_pages,
-        "page":           1,
-        "per_page":       24,
-        "products":       [_summary(r) for r in rows],
-    })
-
-@app.route("/api/suggest")
-def suggest():
-    """Autocomplete: products, categories, brands matching a prefix."""
-    q = request.args.get("q", "").strip()
-    if len(q) < 2:
-        return jsonify({"products": [], "categories": [], "brands": []})
-    q_like = f"%{q}%"
-    db     = get_db()
-    prods  = db.execute(
-        "SELECT product_id, product_name, brand, category "
-        "FROM products WHERE product_name LIKE ? LIMIT 6",
-        [q_like],
-    ).fetchall()
-    cats   = [c for c in CATEGORIES if q.lower() in c.lower()][:4]
-    brands = [b for b in BRANDS   if q.lower() in b.lower()][:4]
-    resp   = jsonify({
-        "products":   [{"id": r["product_id"], "name": r["product_name"],
-                        "brand": r["brand"], "category": r["category"]} for r in prods],
-        "categories": cats,
-        "brands":     brands,
-    })
-    resp.headers["Cache-Control"] = "public, max-age=60"
-    return resp
-
-_chat_system_cache: dict = {}
-
-def _get_chat_system() -> str:
-    """Build a compact system prompt from live catalog data (cached after first call)."""
-    if _chat_system_cache.get("text"):
-        return _chat_system_cache["text"]
-    top_cats   = list(CATEGORIES.keys())[:20]
-    top_brands = BRANDS[:30]
-    text = (
-        "You are a helpful AI assistant for Healix Medical Supply "
-        "(healixmedicalsupply.com), a B2B medical supply distributor. "
-        "You help healthcare professionals, hospitals, and procurement teams "
-        "find the right medical supplies. "
-        "Keep answers concise, professional, and focused on medical supply topics. "
-        "When users ask about products, mention they can search the catalog. "
-        "For urgent clinical questions, direct them to their clinician. "
-        "Phone: (888) 585-6510. "
-        f"Top product categories: {', '.join(top_cats)}. "
-        f"Featured brands: {', '.join(top_brands[:20])}. "
-        "Always respond in plain text — no markdown, no bullet symbols, no asterisks."
-    )
-    _chat_system_cache["text"] = text
-    return text
-
-
-@app.route("/api/chat", methods=["POST"])
-def chat():
-    """Groq-powered chat assistant."""
-    if not GROQ_API_KEY:
-        return jsonify({"reply": "AI chat is not configured yet. Please call (888) 585-6510 for assistance."})
-
-    data     = request.get_json(silent=True) or {}
-    messages = data.get("messages", [])
-    if not isinstance(messages, list):
-        return jsonify({"error": "Invalid messages"}), 400
-
-    # Sanitise: only keep role/content, limit to last 10 turns
-    clean = []
-    for m in messages[-10:]:
-        role    = str(m.get("role", "")).strip()
-        content = str(m.get("content", "")).strip()
-        if role in ("user", "assistant") and content:
-            clean.append({"role": role, "content": content[:1000]})
-
-    if not clean or clean[-1]["role"] != "user":
-        return jsonify({"error": "No user message"}), 400
-
-    payload = json.dumps({
-        "model":       "llama-3.1-8b-instant",
-        "messages":    [{"role": "system", "content": _get_chat_system()}] + clean,
-        "max_tokens":  400,
-        "temperature": 0.4,
-    }).encode("utf-8")
-
-    req = urllib.request.Request(
-        "https://api.groq.com/openai/v1/chat/completions",
-        data    = payload,
-        headers = {
-            "Content-Type":  "application/json",
-            "Authorization": f"Bearer {GROQ_API_KEY}",
-        },
-        method = "POST",
-    )
-    try:
-        with urllib.request.urlopen(req, timeout=15) as r:
-            resp_data = json.loads(r.read())
-        reply = resp_data["choices"][0]["message"]["content"].strip()
-    except urllib.error.HTTPError as e:
-        log.error("Groq API error %s: %s", e.code, e.read())
-        reply = "I'm having trouble connecting right now. Please try again or call (888) 585-6510."
-    except Exception as e:
-        log.error("Chat error: %s", e)
-        reply = "Something went wrong. Please try again or call (888) 585-6510."
-
-    return jsonify({"reply": reply})
-
-
 @app.route("/api/product/<product_id>")
 def product_detail(product_id):
     row = get_db().execute(
@@ -1247,7 +855,6 @@ def product_detail(product_id):
     if row is None:
         return jsonify({"error":"Not found"}), 404
     detail = dict(row)
-    detail["availability"] = "In Stock"
     for key in ("image_url_1","image_url_2","image_url_3","image_url_4"):
         if detail.get(key): detail[key] = _proxy_img(detail[key])
     return jsonify(detail)
@@ -1299,296 +906,9 @@ PEXELS_QUERIES = {
     "dental":"dental teeth equipment","pediatric":"pediatric children hospital medical",
 }
 
-# Subcategory-level queries — 278 buckets covering every (category, subcategory)
-# pair in the 500k-row catalog. This replaces the old 20-bucket category-only
-# scheme so that, e.g., "Stethoscopes" and "Dental Needles" don't share the same
-# 8 recycled stock photos as every other product in their parent category —
-# each of the ~266 distinct subcategories gets its own targeted photo pool.
-# Falls back to PEXELS_QUERIES[cat_slug] for any bucket not listed here.
-SUBCAT_PEXELS_QUERIES = {
-    'dental/dental': 'dental equipment',
-    'dental/dental-needles': 'Dental Needles dental equipment',
-    'dental/dental-mirrors': 'Dental Mirrors dental equipment',
-    'dental/dental-trays': 'Dental Trays dental equipment',
-    'dental/impression-materials': 'Impression Materials dental equipment',
-    'dental/suction-tips': 'Suction Tips dental equipment',
-    'dental/dental-bibs': 'Dental Bibs dental equipment',
-    'diagnostic/ophthalmoscopes': 'Ophthalmoscopes medical diagnostic equipment',
-    'diagnostic/stethoscopes': 'Stethoscopes medical diagnostic equipment',
-    'diagnostic/otoscopes': 'Otoscopes medical diagnostic equipment',
-    'diagnostic/diagnostic': 'medical diagnostic equipment',
-    'diagnostic/rapid': 'rapid diagnostic test kit',
-    'diagnostic/pulse-oximeters': 'Pulse Oximeters medical diagnostic equipment',
-    'diagnostic/sphygmomanometers': 'Sphygmomanometers medical diagnostic equipment',
-    'diagnostic/blood-pressure-monitors': 'Blood Pressure Monitors medical diagnostic equipment',
-    'diagnostic/thermometers': 'Thermometers medical diagnostic equipment',
-    'diagnostic/digital-oral-axillary': 'Digital Oral/Axillary medical diagnostic equipment',
-    'diagnostic/no-touch-infrared': 'No-Touch Infrared medical diagnostic equipment',
-    'diagnostic/sterile': 'sterile medical diagnostic kit',
-    'diagnostic/point-of-care': 'point of care testing medical',
-    'diagnostic/disposable': 'disposable medical diagnostic supplies',
-    'diagnostic/blood-glucose-meter': 'Blood Glucose Meter medical diagnostic equipment',
-    'diagnostic/incentive': 'incentive spirometer',
-    'diagnostic/classic': 'stethoscope medical',
-    'diagnostic/fingertip': 'fingertip pulse oximeter',
-    'diagnostic/taylor': 'reflex hammer medical',
-    'diagnostic/hcg-rapid': 'pregnancy test kit medical',
-    'diagnostic/safety-lancets-30g': 'safety lancet blood test',
-    'diagnostic/group-a': 'strep test kit medical',
-    'diagnostic/aneroid': 'aneroid blood pressure monitor',
-    'diagnostic/256-hz-c': 'tuning fork medical',
-    'diagnostic/digital': 'digital thermometer medical',
-    'diagnostic/cardiology': 'cardiology stethoscope',
-    'diagnostic/100ct': 'medical test strips box',
-    'diagnostic/10-parameter': 'urinalysis test strips',
-    'first-aid/first-aid': 'first aid kit',
-    'first-aid/antiseptics': 'Antiseptics first aid medical',
-    'first-aid/eye-wash': 'Eye Wash first aid medical',
-    'first-aid/first-aid-kits': 'First Aid Kits first aid medical',
-    'first-aid/burns': 'Burns first aid medical',
-    'first-aid/bandages': 'Bandages first aid medical',
-    'gloves/exam-gloves': 'Exam Gloves medical exam gloves',
-    'gloves/surgical-gloves': 'Surgical Gloves medical exam gloves',
-    'gloves/chemotherapy-gloves': 'Chemotherapy Gloves medical exam gloves',
-    'iv/iv-catheters': 'IV Catheters IV intravenous medical',
-    'iv/vascular': 'vascular access IV medical',
-    'iv/injection': 'injection syringe medical',
-    'iv/iv-administration': 'IV Administration IV intravenous medical',
-    'iv/iv-fluids': 'IV Fluids IV intravenous medical',
-    'iv/iv-accessories': 'IV Accessories IV intravenous medical',
-    'iv/lab-collection': 'Lab Collection IV intravenous medical',
-    'iv/needleless-connector': 'Needleless Connector IV intravenous medical',
-    'iv/peripheral': 'peripheral IV catheter',
-    'iv/iv-therapy': 'IV Therapy IV intravenous medical',
-    'iv/collection': 'blood collection tube medical',
-    'iv/central-line': 'Central Line IV intravenous medical',
-    'iv/gravity': 'IV gravity infusion set',
-    'iv/infusion-pumps': 'Infusion Pumps IV intravenous medical',
-    'iv/syringes': 'Syringes IV intravenous medical',
-    'iv/needleless-connectors': 'Needleless Connectors IV intravenous medical',
-    'iv/iv-tubing': 'IV Tubing IV intravenous medical',
-    'iv/blood-collection': 'Blood Collection IV intravenous medical',
-    'incontinence/liners': 'Liners adult incontinence care medical',
-    'incontinence/adult-briefs': 'Adult Briefs adult incontinence care medical',
-    'incontinence/underpads': 'Underpads adult incontinence care medical',
-    'incontinence/swim-diapers': 'Swim Diapers adult incontinence care medical',
-    'incontinence/underpads-chux': 'Underpads (Chux) adult incontinence care medical',
-    'incontinence/adult-briefs-tab-style': 'Adult Briefs (Tab Style) adult incontinence care medical',
-    'incontinence/liner-pads': 'Liner Pads adult incontinence care medical',
-    'incontinence/belted-undergarments': 'Belted Undergarments adult incontinence care medical',
-    'incontinence/protective-underwear': 'Protective Underwear adult incontinence care medical',
-    'incontinence/bladder-control-pads': 'Bladder Control Pads adult incontinence care medical',
-    'incontinence/male-guards': 'Male Guards adult incontinence care medical',
-    'incontinence/fecal-incontinence-pouch': 'Fecal Incontinence Pouch adult incontinence care medical',
-    'incontinence/pediatric-diapers': 'Pediatric Diapers adult incontinence care medical',
-    'incontinence/guards-shields': 'Guards & Shields adult incontinence care medical',
-    'incontinence/pull-ons': 'incontinence pull-on underwear',
-    'lab/lab': 'medical laboratory supplies',
-    'lab/lab-safety': 'Lab Safety medical laboratory',
-    'lab/pipettes': 'Pipettes medical laboratory',
-    'lab/microbiology': 'Microbiology medical laboratory',
-    'lab/blood-collection': 'Blood Collection medical laboratory',
-    'lab/histology': 'Histology medical laboratory',
-    'lab/slides-coverslips': 'Slides & Coverslips medical laboratory',
-    'lab/reagents': 'Reagents medical laboratory',
-    'lab/lab-tubes': 'Lab Tubes medical laboratory',
-    'lab/specimen-collection': 'Specimen Collection medical laboratory',
-    'lab/phlebotomy': 'Phlebotomy medical laboratory',
-    'lab/lab-ppe': 'Lab PPE medical laboratory',
-    'lab/collection': 'specimen collection medical',
-    'lab/urinalysis': 'Urinalysis medical laboratory',
-    'mobility/mobility': 'mobility aid medical',
-    'mobility/walkers': 'Walkers mobility wheelchair medical',
-    'mobility/crutches': 'Crutches mobility wheelchair medical',
-    'mobility/dme': 'durable medical equipment',
-    'mobility/wheelchairs': 'Wheelchairs mobility wheelchair medical',
-    'mobility/hospital-beds': 'Hospital Beds mobility wheelchair medical',
-    'mobility/commodes': 'Commodes mobility wheelchair medical',
-    'mobility/canes': 'Canes mobility wheelchair medical',
-    'nutrition/enteral-feeding': 'Enteral Feeding medical enteral nutrition',
-    'nutrition/oral-supplements': 'Oral Supplements medical enteral nutrition',
-    'nutrition/syringes-pumps': 'Syringes & Pumps medical enteral nutrition',
-    'nutrition/tube-feeding': 'Tube Feeding medical enteral nutrition',
-    'nutrition/enteral-access': 'Enteral Access medical enteral nutrition',
-    'nutrition/feeding-tubes': 'Feeding Tubes medical enteral nutrition',
-    'nutrition/oral-hygiene': 'Oral Hygiene medical enteral nutrition',
-    'nutrition/hydration': 'Hydration medical enteral nutrition',
-    'nutrition/enteral-supplies': 'Enteral Supplies medical enteral nutrition',
-    'nutrition/dysphagia': 'Dysphagia medical enteral nutrition',
-    'nutrition/oral-nutrition': 'Oral Nutrition medical enteral nutrition',
-    'nutrition/pump': 'enteral feeding pump',
-    'or-surgery/sutures-staples': 'Sutures & Staples surgical operating room',
-    'or-surgery/surgical-instruments': 'Surgical Instruments surgical operating room',
-    'or-surgery/sutures': 'Sutures surgical operating room',
-    'or-surgery/surgical-drapes': 'Surgical Drapes surgical operating room',
-    'or-surgery/staples': 'Staples surgical operating room',
-    'or-surgery/hemostatic-agents': 'Hemostatic Agents surgical operating room',
-    'or-surgery/electrosurgery': 'Electrosurgery surgical operating room',
-    'or-surgery/surgical-gowns': 'Surgical Gowns surgical operating room',
-    'or-surgery/procedure-drapes': 'Procedure Drapes surgical operating room',
-    'or-surgery/surgical-masks': 'Surgical Masks surgical operating room',
-    'or-surgery/personal-protection': 'surgical PPE mask',
-    'or-surgery/wound-cavity': 'surgical wound packing',
-    'or-surgery/surgical-accessories': 'Surgical Accessories surgical operating room',
-    'or-surgery/head-face': 'surgical cap face mask',
-    'or-surgery/laparoscopy': 'Laparoscopy surgical operating room',
-    'or-surgery/wound-closure': 'Wound Closure surgical operating room',
-    'or-surgery/sponges': 'surgical gauze sponge',
-    'or-surgery/gowns': 'surgical gown',
-    'or-surgery/cautery': 'surgical cautery device',
-    'or-surgery/retractors': 'Retractors surgical operating room',
-    'orthopedic/ambulatory': 'walking aid orthopedic',
-    'orthopedic/walking-aids': 'Walking Aids orthopedic brace support',
-    'orthopedic/splints-braces': 'Splints & Braces orthopedic brace support',
-    'orthopedic/knee': 'knee brace orthopedic',
-    'orthopedic/cervical': 'cervical collar neck brace',
-    'orthopedic/canes': 'Canes orthopedic brace support',
-    'orthopedic/ankle': 'ankle brace orthopedic',
-    'orthopedic/exercise-therapy': 'Exercise & Therapy orthopedic brace support',
-    'orthopedic/casting': 'Casting orthopedic brace support',
-    'orthopedic/electrotherapy': 'Electrotherapy orthopedic brace support',
-    'orthopedic/back': 'back brace orthopedic',
-    'orthopedic/wrist': 'wrist brace orthopedic',
-    'orthopedic/elbow': 'elbow brace orthopedic',
-    'orthopedic/lower-limb': 'leg brace orthopedic',
-    'orthopedic/hot-cold-therapy': 'Hot & Cold Therapy orthopedic brace support',
-    'orthopedic/positioning': 'patient positioning cushion',
-    'orthopedic/shoulder': 'shoulder brace orthopedic',
-    'ppe/chemical-ppe': 'Chemical PPE medical protective equipment',
-    'ppe/radiation-ppe': 'Radiation PPE medical protective equipment',
-    'ppe/respiratory': 'Respiratory medical protective equipment',
-    'ppe/fluid-resistant': 'Fluid-Resistant medical protective equipment',
-    'ppe/masks': 'Masks medical protective equipment',
-    'ppe/bouffant-caps': 'Bouffant Caps medical protective equipment',
-    'ppe/gowns': 'Gowns medical protective equipment',
-    'ppe/face-shields': 'Face Shields medical protective equipment',
-    'ppe/shoe-covers': 'Shoe Covers medical protective equipment',
-    'ppe/surgical': 'surgical PPE mask',
-    'ppe/full-body': 'full body PPE suit',
-    'ppe/foot-protection': 'Foot Protection medical protective equipment',
-    'ppe/head': 'PPE head cover',
-    'ppe/eye': 'safety goggles PPE',
-    'ppe/eye-face': 'face shield PPE',
-    'patient-care/patient-care': 'hospital patient care',
-    'patient-care/monitoring': 'Monitoring hospital patient care',
-    'patient-care/patient-safety': 'Patient Safety hospital patient care',
-    'patient-care/equipment': 'hospital patient equipment',
-    'patient-care/textiles': 'Textiles hospital patient care',
-    'patient-care/urinals': 'Urinals hospital patient care',
-    'patient-care/bedpans': 'Bedpans hospital patient care',
-    'patient-care/patient-transfer': 'Patient Transfer hospital patient care',
-    'patient-care/patient-apparel': 'Patient Apparel hospital patient care',
-    'patient-care/lab': 'medical lab supplies',
-    'patient-care/exam': 'medical exam room',
-    'patient-care/durable-medical-equipment': 'Durable Medical Equipment hospital patient care',
-    'patient-care/patient-mobility': 'Patient Mobility hospital patient care',
-    'patient-care/furniture': 'hospital furniture',
-    'patient-care/thermometers': 'Thermometers hospital patient care',
-    'patient-care/oral-care': 'Oral Care hospital patient care',
-    'patient-care/blood-pressure': 'Blood Pressure hospital patient care',
-    'patient-care/bathing-hygiene': 'Bathing & Hygiene hospital patient care',
-    'patient-care/repositioning': 'Repositioning hospital patient care',
-    'pediatric/pediatric': 'pediatric medical care',
-    'pediatric/pediatric-equipment': 'Pediatric Equipment pediatric medical',
-    'pediatric/infant-care': 'Infant Care pediatric medical',
-    'pediatric/pediatric-supplies': 'Pediatric Supplies pediatric medical',
-    'pharmacy/pharmacy': 'pharmacy medication',
-    'pharmacy/medication-administration': 'Medication Administration pharmacy medication',
-    'pharmacy/sharps-disposal': 'Sharps Disposal pharmacy medication',
-    'pharmacy/counting-trays': 'Counting Trays pharmacy medication',
-    'pharmacy/pharmacy-supplies': 'Pharmacy Supplies pharmacy medication',
-    'pharmacy/pill-organizers': 'Pill Organizers pharmacy medication',
-    'respiratory/suction': 'Suction respiratory oxygen medical equipment',
-    'respiratory/oxygen-mask': 'Oxygen Mask respiratory oxygen medical equipment',
-    'respiratory/tracheostomy-tube': 'Tracheostomy Tube respiratory oxygen medical equipment',
-    'respiratory/oxygen-therapy': 'Oxygen Therapy respiratory oxygen medical equipment',
-    'respiratory/tracheostomy-care': 'Tracheostomy Care respiratory oxygen medical equipment',
-    'respiratory/yankauer-suction-tip': 'Yankauer Suction Tip respiratory oxygen medical equipment',
-    'respiratory/peak-flow-meter': 'Peak Flow Meter respiratory oxygen medical equipment',
-    'respiratory/resuscitation-bag': 'Resuscitation Bag respiratory oxygen medical equipment',
-    'respiratory/nasal-cannula': 'Nasal Cannula respiratory oxygen medical equipment',
-    'respiratory/spirometer': 'Spirometer respiratory oxygen medical equipment',
-    'respiratory/laryngeal-mask-airway': 'Laryngeal Mask Airway respiratory oxygen medical equipment',
-    'respiratory/aerosol-mask': 'Aerosol Mask respiratory oxygen medical equipment',
-    'respiratory/cpap-mask': 'CPAP Mask respiratory oxygen medical equipment',
-    'respiratory/nebulizers': 'Nebulizers respiratory oxygen medical equipment',
-    'respiratory/bipap-mask': 'BiPAP Mask respiratory oxygen medical equipment',
-    'respiratory/ventilator-circuit': 'Ventilator Circuit respiratory oxygen medical equipment',
-    'respiratory/endotracheal-tube': 'Endotracheal Tube respiratory oxygen medical equipment',
-    'respiratory/trachea-care-kit': 'Trachea Care Kit respiratory oxygen medical equipment',
-    'respiratory/suction-catheter': 'Suction Catheter respiratory oxygen medical equipment',
-    'respiratory/tracheostomy': 'tracheostomy care medical',
-    'respiratory/masks-filters': 'Masks & Filters respiratory oxygen medical equipment',
-    'respiratory/tracheal-suction-kit': 'Tracheal Suction Kit respiratory oxygen medical equipment',
-    'respiratory/nebulizer': 'Nebulizer respiratory oxygen medical equipment',
-    'respiratory/oxygen-tubing': 'Oxygen Tubing respiratory oxygen medical equipment',
-    'respiratory/spirometry': 'Spirometry respiratory oxygen medical equipment',
-    'respiratory/oxygen-delivery': 'Oxygen Delivery respiratory oxygen medical equipment',
-    'skin-care/cleansing': 'skin cleanser medical',
-    'skin-care/protective': 'skin protectant medical',
-    'skin-care/moisturizers': 'Moisturizers medical skin care',
-    'skin-care/antifungal': 'Antifungal medical skin care',
-    'skin-care/antifungals': 'Antifungals medical skin care',
-    'skin-care/cleansers': 'Cleansers medical skin care',
-    'skin-care/protective-film': 'Protective Film medical skin care',
-    'skin-care/moisturizing': 'medical moisturizer cream',
-    'skin-care/body-wash': 'Body Wash medical skin care',
-    'skin-care/pressure-relief': 'Pressure Relief medical skin care',
-    'skin-care/deodorizing': 'deodorizing spray medical',
-    'skin-care/adhesive-removal': 'Adhesive Removal medical skin care',
-    'skin-care/barrier-creams': 'Barrier Creams medical skin care',
-    'skin-care/wound-cleansers': 'Wound Cleansers medical skin care',
-    'textiles/linen': 'hospital linen',
-    'textiles/patient-gowns': 'Patient Gowns hospital linen textile',
-    'textiles/bed-linens': 'Bed Linens hospital linen textile',
-    'textiles/healthcare-apparel': 'Healthcare Apparel hospital linen textile',
-    'textiles/washcloths': 'Washcloths hospital linen textile',
-    'textiles/towels-washcloths': 'Towels & Washcloths hospital linen textile',
-    'textiles/draw-sheets': 'Draw Sheets hospital linen textile',
-    'textiles/blankets': 'Blankets hospital linen textile',
-    'textiles/launderable-gowns': 'Launderable Gowns hospital linen textile',
-    'textiles/draping': 'surgical drape',
-    'textiles/patient-apparel': 'Patient Apparel hospital linen textile',
-    'textiles/apparel': 'healthcare apparel scrubs',
-    'textiles/gowns': 'patient gown hospital',
-    'ostomy/urinary-drainage': 'Urinary Drainage urology ostomy medical',
-    'ostomy/ostomy': 'ostomy supplies medical',
-    'ostomy/urinary': 'urinary catheter medical',
-    'ostomy/ostomy-accessories': 'Ostomy Accessories urology ostomy medical',
-    'ostomy/intermittent-catheters': 'Intermittent Catheters urology ostomy medical',
-    'ostomy/foley-catheters': 'Foley Catheters urology ostomy medical',
-    'ostomy/ostomy-pouches': 'Ostomy Pouches urology ostomy medical',
-    'ostomy/monitoring': 'urine output monitoring medical',
-    'ostomy/urinary-catheters': 'Urinary Catheters urology ostomy medical',
-    'ostomy/drainage-bags': 'Drainage Bags urology ostomy medical',
-    'wound-care/skin-protectants': 'Skin Protectants wound care dressing medical',
-    'wound-care/negative-pressure-npwt': 'Negative Pressure (NPWT) wound care dressing medical',
-    'wound-care/wound-cleansers': 'Wound Cleansers wound care dressing medical',
-    'wound-care/collagen-dressings': 'Collagen Dressings wound care dressing medical',
-    'wound-care/hydrocolloid-dressings': 'Hydrocolloid Dressings wound care dressing medical',
-    'wound-care/gauze-sponges': 'Gauze Sponges wound care dressing medical',
-    'wound-care/alginate-dressings': 'Alginate Dressings wound care dressing medical',
-    'wound-care/hydrogel-dressings': 'Hydrogel Dressings wound care dressing medical',
-    'wound-care/abd-pads': 'ABD Pads wound care dressing medical',
-    'wound-care/island-dressings': 'Island Dressings wound care dressing medical',
-    'wound-care/silver-antimicrobial': 'Silver Antimicrobial wound care dressing medical',
-    'wound-care/transparent-film': 'Transparent Film wound care dressing medical',
-    'wound-care/wound-closure-strips': 'Wound Closure Strips wound care dressing medical',
-    'wound-care/compression-bandages': 'Compression Bandages wound care dressing medical',
-    'wound-care/foam-dressings': 'Foam Dressings wound care dressing medical',
-    'wound-care/compression': 'compression bandage wound',
-    'wound-care/tapes-adhesives': 'Tapes & Adhesives wound care dressing medical',
-    'wound-care/bandages': 'Bandages wound care dressing medical',
-    'wound-care/gauze': 'Gauze wound care dressing medical',
-    'wound-care/dressings': 'wound dressing medical',
-    'wound-care/wound-closure': 'wound closure strips medical',
-    'wound-care/antimicrobial-dressings': 'Antimicrobial Dressings wound care dressing medical',
-    'wound-care/wound-dressings': 'Wound Dressings wound care dressing medical',
-}
-
 _PEXELS_CACHE: dict[str, list[str]] = {}
 
-def _fetch_pexels_photos(query: str, count: int = 40) -> list[str]:
+def _fetch_pexels_photos(query: str, count: int = 8) -> list[str]:
     if not PEXELS_API_KEY:
         return []
     cache_key  = hashlib.sha1(f"pexels-{query}".encode()).hexdigest()
@@ -1610,28 +930,10 @@ def _fetch_pexels_photos(query: str, count: int = 40) -> list[str]:
 
 @app.route("/api/photo/<cat_slug>/<int:n>")
 def category_photo(cat_slug, n):
-    """Legacy 2-segment route — kept for any cached/bookmarked URLs. Delegates
-    to the subcategory-aware handler with an empty subcategory bucket."""
-    return _serve_bucket_photo(cat_slug, "_", n)
-
-@app.route("/api/photo/<cat_slug>/<subcat_slug>/<int:n>")
-def subcategory_photo(cat_slug, subcat_slug, n):
-    return _serve_bucket_photo(cat_slug, subcat_slug, n)
-
-def _serve_bucket_photo(cat_slug, subcat_slug, n):
-    bucket = f"{cat_slug}/{subcat_slug}" if subcat_slug and subcat_slug != "_" else cat_slug
-    if bucket not in _PEXELS_CACHE:
-        query = (SUBCAT_PEXELS_QUERIES.get(bucket)
-                  or PEXELS_QUERIES.get(cat_slug)
-                  or "medical supplies")
-        _PEXELS_CACHE[bucket] = _fetch_pexels_photos(query)
-    photos = _PEXELS_CACHE.get(bucket, [])
-    if not photos and bucket != cat_slug:
-        # Subcategory pool came back empty (e.g. API hiccup) — fall back to
-        # the broader category pool rather than dropping straight to an icon.
-        if cat_slug not in _PEXELS_CACHE:
-            _PEXELS_CACHE[cat_slug] = _fetch_pexels_photos(PEXELS_QUERIES.get(cat_slug, "medical supplies"))
-        photos = _PEXELS_CACHE.get(cat_slug, [])
+    if cat_slug not in _PEXELS_CACHE:
+        query = PEXELS_QUERIES.get(cat_slug, "medical supplies")
+        _PEXELS_CACHE[cat_slug] = _fetch_pexels_photos(query)
+    photos = _PEXELS_CACHE.get(cat_slug, [])
     if photos:
         photo_url  = photos[n % len(photos)]
         cache_key  = hashlib.sha1(photo_url.encode()).hexdigest()
@@ -1658,12 +960,6 @@ def _serve_bucket_photo(cat_slug, subcat_slug, n):
 @app.route("/api/has-photos")
 def has_photos():
     return jsonify({"pexels": bool(PEXELS_API_KEY)})
-
-@app.route("/ping")
-def ping():
-    """Lightweight keep-alive endpoint — use with UptimeRobot (every 5 min)
-    to prevent Render free-tier cold starts."""
-    return "pong", 200
 
 @app.route("/api/catimg/<cat_slug>/<int:n>")
 def category_image(cat_slug, n):
@@ -1703,108 +999,6 @@ def proxy_image():
     """Legacy image proxy — kept for URL compatibility."""
     return Response("", status=404)
 
-@app.route("/api/img-proxy")
-def img_proxy():
-    """
-    Server-side image proxy.  Fetches product images from the source domain
-    (medline.com etc.) with a matching Referer so hotlink protection is bypassed,
-    then caches the result locally for 30 days.
-    """
-    url = request.args.get("url", "").strip()
-    if not url or not url.startswith("https://"):
-        return Response("", status=400)
-
-    # Only allow medline.com image URLs (allowlist for safety)
-    from urllib.parse import urlparse
-    host = urlparse(url).netloc
-    if not (host.endswith("medline.com") or host.endswith("medlineplus.gov")):
-        return Response("", status=403)
-
-    cache_key  = hashlib.sha1(url.encode()).hexdigest()
-    cache_file = IMG_CACHE / cache_key
-
-    if cache_file.exists():
-        resp = Response(cache_file.read_bytes(), content_type="image/jpeg")
-        resp.headers["Cache-Control"] = "public, max-age=2592000"
-        return resp
-
-    try:
-        req = urllib.request.Request(url, headers={
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/124.0 Safari/537.36",
-            "Referer":    "https://www.medline.com/",
-            "Accept":     "image/webp,image/apng,image/*,*/*;q=0.8",
-        })
-        with urllib.request.urlopen(req, timeout=8) as r:
-            img_data = r.read()
-        cache_file.write_bytes(img_data)
-        resp = Response(img_data, content_type="image/jpeg")
-        resp.headers["Cache-Control"] = "public, max-age=2592000"
-        return resp
-    except Exception as e:
-        log.debug("img-proxy failed for %s: %s", url, e)
-        return Response("", status=404)
-
-@app.route("/api/inquiry", methods=["POST"])
-def submit_inquiry():
-    data  = request.get_json(silent=True) or {}
-    name  = (data.get("customer_name") or "").strip()
-    phone = (data.get("phone")         or "").strip()
-    email = (data.get("email")         or "").strip()
-    if not name or not phone or not email:
-        return jsonify({"error": "Name, phone, and email are required"}), 400
-    db = get_db()
-    db.execute(
-        """INSERT INTO inquiries
-           (product_id, product_name, brand, customer_name, phone, email, message)
-           VALUES (?,?,?,?,?,?,?)""",
-        [data.get("product_id",""), data.get("product_name",""), data.get("brand",""),
-         name, phone, email, (data.get("message") or "").strip()]
-    )
-    db.commit()
-    try:
-        _notify_inquiry(data)
-    except Exception as e:
-        log.warning("Inquiry notification failed: %s", e)
-    return jsonify({"success": True})
-
-def _notify_inquiry(data):
-    """Send email notification for a new bulk pricing inquiry."""
-    smtp_host = os.getenv("SMTP_HOST", "")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_pass = os.getenv("SMTP_PASS", "")
-    to_email  = os.getenv("CONTACT_EMAIL", "newyorkoxygensupply@gmail.com")
-    if not smtp_host or not smtp_user or not smtp_pass:
-        log.info("SMTP not configured — inquiry saved to DB only.")
-        return
-    import smtplib
-    from email.mime.text import MIMEText
-    from email.mime.multipart import MIMEMultipart
-    subject = f"New Bulk Pricing Inquiry — {data.get('product_name','(unknown)')}"
-    body = (
-        f"New bulk pricing inquiry received:\n\n"
-        f"Product:  {data.get('product_name','')}\n"
-        f"Brand:    {data.get('brand','')}\n"
-        f"SKU/ID:   {data.get('product_id','')}\n\n"
-        f"Customer: {data.get('customer_name','')}\n"
-        f"Phone:    {data.get('phone','')}\n"
-        f"Email:    {data.get('email','')}\n\n"
-        f"Notes:\n{data.get('message','(none)')}\n"
-    )
-    msg = MIMEMultipart()
-    msg["From"]    = smtp_user
-    msg["To"]      = to_email
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain"))
-    with smtplib.SMTP(smtp_host, smtp_port) as s:
-        s.ehlo()
-        s.starttls()
-        s.login(smtp_user, smtp_pass)
-        s.sendmail(smtp_user, to_email, msg.as_string())
-    log.info("Inquiry notification sent to %s", to_email)
-
 # ── robots.txt ─────────────────────────────────────────────────────────────────
 @app.route("/robots.txt")
 def robots():
@@ -1812,9 +1006,7 @@ def robots():
     sitemap_list = "\n".join(
         [f"Sitemap: {SITE_URL}/sitemap.xml",
          f"Sitemap: {SITE_URL}/sitemap-categories.xml",
-         f"Sitemap: {SITE_URL}/sitemap-brands.xml",
-         f"Sitemap: {SITE_URL}/sitemap-blog.xml",
-         f"Sitemap: {SITE_URL}/sitemap-cities.xml"]
+         f"Sitemap: {SITE_URL}/sitemap-brands.xml"]
         + [f"Sitemap: {SITE_URL}/sitemap-products-{b}.xml" for b in range(1, n_batches+1)]
     )
     body = f"""User-agent: *
@@ -1823,16 +1015,13 @@ Allow: /c/
 Allow: /p/
 Allow: /brand/
 Allow: /brands
-Allow: /blog
-Allow: /blog/
-Allow: /locations
-Allow: /city/
 Disallow: /api/
 Disallow: /health
 Disallow: /*?sort=
 Disallow: /*?avail=
 Disallow: /*?latex_free=
 Disallow: /*?sterile=
+Crawl-delay: 1
 
 {sitemap_list}
 """
@@ -1847,9 +1036,7 @@ def sitemap_index():
     n_batches = math.ceil(TOTAL / SITEMAP_BATCH)
     sitemaps  = (
         [(f"{SITE_URL}/sitemap-categories.xml", TODAY),
-         (f"{SITE_URL}/sitemap-brands.xml",     TODAY),
-         (f"{SITE_URL}/sitemap-blog.xml",        TODAY),
-         (f"{SITE_URL}/sitemap-cities.xml",      TODAY)]
+         (f"{SITE_URL}/sitemap-brands.xml",     TODAY)]
         + [(f"{SITE_URL}/sitemap-products-{b}.xml", TODAY) for b in range(1, n_batches+1)]
     )
     body  = '<?xml version="1.0" encoding="UTF-8"?>\n'
@@ -1898,44 +1085,6 @@ def sitemap_brands():
     resp.headers["Cache-Control"] = "public, max-age=3600"
     return resp
 
-@app.route("/sitemap-blog.xml")
-def sitemap_blog():
-    body  = '<?xml version="1.0" encoding="UTF-8"?>\n'
-    body += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    body += (f"  <url><loc>{SITE_URL}/blog</loc>"
-             f"<lastmod>{TODAY}</lastmod>"
-             f"<changefreq>weekly</changefreq>"
-             f"<priority>0.8</priority></url>\n")
-    for post in BLOGS:
-        loc = f"{SITE_URL}/blog/{post['slug']}"
-        body += (f"  <url><loc>{loc}</loc>"
-                 f"<lastmod>{post.get('date', TODAY)}</lastmod>"
-                 f"<changefreq>monthly</changefreq>"
-                 f"<priority>0.7</priority></url>\n")
-    body += "</urlset>"
-    resp = Response(body, mimetype="application/xml")
-    resp.headers["Cache-Control"] = "public, max-age=3600"
-    return resp
-
-@app.route("/sitemap-cities.xml")
-def sitemap_cities():
-    body  = '<?xml version="1.0" encoding="UTF-8"?>\n'
-    body += '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
-    body += (f"  <url><loc>{SITE_URL}/locations</loc>"
-             f"<lastmod>{TODAY}</lastmod>"
-             f"<changefreq>monthly</changefreq>"
-             f"<priority>0.8</priority></url>\n")
-    for city in CITIES:
-        loc = f"{SITE_URL}/city/{city['slug']}"
-        body += (f"  <url><loc>{loc}</loc>"
-                 f"<lastmod>{TODAY}</lastmod>"
-                 f"<changefreq>monthly</changefreq>"
-                 f"<priority>0.7</priority></url>\n")
-    body += "</urlset>"
-    resp = Response(body, mimetype="application/xml")
-    resp.headers["Cache-Control"] = "public, max-age=86400"
-    return resp
-
 @app.route("/sitemap-products-<int:batch>.xml")
 def sitemap_products(batch):
     start = (batch - 1) * SITEMAP_BATCH
@@ -1958,105 +1107,6 @@ def sitemap_products(batch):
     resp = Response(body, mimetype="application/xml")
     resp.headers["Cache-Control"] = "public, max-age=86400"
     return resp
-
-# ── Blog routes ────────────────────────────────────────────────────────────────
-@app.route("/blog")
-def blog_list():
-    seen = set()
-    blog_categories = []
-    for b in BLOGS:
-        if b["category"] not in seen:
-            seen.add(b["category"])
-            blog_categories.append(b["category"])
-    return render_template("blog_list.html",
-        site_name=SITE_NAME, site_url=SITE_URL,
-        title=f"Medical Supply Blog | Clinical Insights & Industry News | {SITE_NAME}",
-        description=(
-            "Expert articles on medical supply procurement, wound care, respiratory therapy, "
-            "infection prevention, home oxygen therapy, and healthcare industry trends."
-        ),
-        canonical=SITE_URL + "/blog",
-        og_image=SITE_URL + "/static/img/og-default.jpg",
-        blogs=BLOGS,
-        blog_categories=blog_categories,
-    )
-
-@app.route("/blog/<slug>")
-def blog_post(slug):
-    post = BLOG_BY_SLUG.get(slug)
-    if not post:
-        return render_template("404.html", site_name=SITE_NAME, site_url=SITE_URL,
-                               title="Article Not Found"), 404
-    breadcrumbs = [
-        {"name":"Home","url":SITE_URL+"/"},
-        {"name":"Blog","url":SITE_URL+"/blog"},
-        {"name":post["title"],"url":f"{SITE_URL}/blog/{slug}"},
-    ]
-    # Related posts: same category, excluding self
-    related = [b for b in BLOGS if b["category"] == post["category"] and b["slug"] != slug][:3]
-    if len(related) < 3:
-        related += [b for b in BLOGS if b["slug"] != slug and b not in related][:3-len(related)]
-    return render_template("blog_post.html",
-        site_name=SITE_NAME, site_url=SITE_URL,
-        title=f"{post['title']} | {SITE_NAME} Blog",
-        description=post["meta_description"],
-        canonical=f"{SITE_URL}/blog/{slug}",
-        og_image=SITE_URL + "/static/img/og-default.jpg",
-        post=post, breadcrumbs=breadcrumbs, related=related,
-    )
-
-# ── Locations / city routes ─────────────────────────────────────────────────────
-# Group cities by state for the index page
-_CITIES_BY_STATE: dict = defaultdict(list)
-for _c in CITIES:
-    _CITIES_BY_STATE[_c["state"]].append(_c)
-CITIES_BY_STATE = dict(_CITIES_BY_STATE)
-STATES_SORTED = sorted(CITIES_BY_STATE.keys())
-
-@app.route("/locations")
-def locations_index():
-    return render_template("locations.html",
-        site_name=SITE_NAME, site_url=SITE_URL,
-        title=f"Medical Supply Delivery by City | {SITE_NAME} — Serving All 50 States",
-        description=(
-            f"Find {SITE_NAME} medical supply services near you. "
-            "We ship clinical-grade medical supplies to healthcare facilities in every US city. "
-            "Browse your city for local availability and ordering information."
-        ),
-        canonical=SITE_URL + "/locations",
-        og_image=SITE_URL + "/static/img/og-default.jpg",
-        cities_by_state=CITIES_BY_STATE,
-        states=STATES_SORTED,
-        total_cities=len(CITIES),
-    )
-
-@app.route("/city/<city_slug>")
-def city_page(city_slug):
-    city = CITY_BY_SLUG.get(city_slug)
-    if not city:
-        return render_template("404.html", site_name=SITE_NAME, site_url=SITE_URL,
-                               title="City Not Found"), 404
-    # Featured categories for the city page
-    top_cats = list(CATEGORIES.keys())[:8]
-    breadcrumbs = [
-        {"name":"Home","url":SITE_URL+"/"},
-        {"name":"Locations","url":SITE_URL+"/locations"},
-        {"name":f"{city['city']}, {city['abbr']}","url":f"{SITE_URL}/city/{city_slug}"},
-    ]
-    return render_template("city_page.html",
-        site_name=SITE_NAME, site_url=SITE_URL,
-        title=(f"Medical Supplies in {city['city']}, {city['abbr']} | "
-               f"Clinical-Grade Supply Delivery | {SITE_NAME}"),
-        description=(
-            f"Order medical supplies for delivery to {city['city']}, {city['state']}. "
-            f"{TOTAL:,}+ clinical-grade products including gloves, wound care, oxygen concentrators, "
-            f"CPAP machines, ostomy supplies, and PPE. Fast shipping to {city['city']} healthcare facilities."
-        ),
-        canonical=f"{SITE_URL}/city/{city_slug}",
-        og_image=SITE_URL + "/static/img/og-default.jpg",
-        city=city, top_cats=top_cats, total=TOTAL,
-        brand_count=len(BRANDS), breadcrumbs=breadcrumbs,
-    )
 
 # ── Health ─────────────────────────────────────────────────────────────────────
 @app.route("/health")

@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <rect width="320" height="320" fill="#fef9c3"/>
+  <rect x="16" y="16" width="288" height="288" rx="16" fill="#f3efbb"/>
+  <!-- Product icon -->
+  <g transform="translate(0,10)" stroke="#75430c" stroke-width="8"
+     stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M160 85 L125 95 L125 150 C125 172 143 188 160 195 C177 188 195 172 195 150 L195 95 Z M145 148 L156 158 L178 133"/>
+  </g>
+  <!-- Label bar -->
+  <rect x="0" y="264" width="320" height="56" fill="#854d0e" opacity="0.10"/>
+  <rect x="0" y="264" width="320" height="3" fill="#854d0e" opacity="0.20"/>
+  <text x="160" y="288" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="#854d0e"
+        text-anchor="middle" dominant-baseline="middle">PPE</text>
+  <text x="160" y="307" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="#854d0e" opacity="0.55"
+        text-anchor="middle" dominant-baseline="middle">Clinical Grade · Trusted Brands</text>
+</svg>

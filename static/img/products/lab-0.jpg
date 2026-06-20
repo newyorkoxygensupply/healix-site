@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" width="320" height="320">
+  <rect width="320" height="320" fill="#ecfdf5"/>
+  <rect x="16" y="16" width="288" height="288" rx="16" fill="#e2f2eb"/>
+  <!-- Product icon -->
+  <g transform="translate(0,10)" stroke="#065f46" stroke-width="8"
+     stroke-linecap="round" stroke-linejoin="round" fill="none">
+    <path d="M140 90 L140 145 C120 168 112 185 112 198 C112 215 128 225 160 225 C192 225 208 215 208 198 C208 185 200 168 180 145 L180 90 M135 115 L185 115 M140 90 L180 90"/>
+  </g>
+  <!-- Label bar -->
+  <rect x="0" y="264" width="320" height="56" fill="#065f46" opacity="0.10"/>
+  <rect x="0" y="264" width="320" height="3" fill="#065f46" opacity="0.20"/>
+  <text x="160" y="288" font-family="system-ui,-apple-system,sans-serif"
+        font-size="13" font-weight="700" fill="#065f46"
+        text-anchor="middle" dominant-baseline="middle">Lab Supplies</text>
+  <text x="160" y="307" font-family="system-ui,-apple-system,sans-serif"
+        font-size="10" fill="#065f46" opacity="0.55"
+        text-anchor="middle" dominant-baseline="middle">Clinical Grade · Trusted Brands</text>
+</svg>

@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>{{ title }}</title>
+<meta name="description" content="{{ description }}">
+<link rel="canonical" href="{{ canonical }}">
+<meta name="robots" content="index, follow">
+
+<meta property="og:type"         content="product">
+<meta property="og:title"        content="{{ title }}">
+<meta property="og:description"  content="{{ description }}">
+<meta property="og:url"          content="{{ canonical }}">
+<meta property="og:site_name"    content="{{ site_name }}">
+<meta property="og:image"        content="{{ og_image }}">
+<meta property="og:image:width"  content="800">
+<meta property="og:image:height" content="800">
+<meta property="og:locale"       content="en_US">
+{% if price_val %}
+<meta property="product:price:amount"   content="{{ '%.2f' | format(price_val) }}">
+<meta property="product:price:currency" content="USD">
+{% endif %}
+
+<meta name="twitter:card"        content="summary_large_image">
+<meta name="twitter:title"       content="{{ title }}">
+<meta name="twitter:description" content="{{ description }}">
+<meta name="twitter:image"       content="{{ og_image }}">
+
+<!-- JSON-LD: Product + BreadcrumbList -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Product",
+      "name": {{ p.product_name | tojson }},
+      "description": {{ (p.description or '') | tojson }},
+      "sku": {{ p.sku | tojson }},
+      "mpn": {{ (p.get('upc','') or '') | tojson }},
+      "brand": {
+        "@type": "Brand",
+        "name": {{ p.brand | tojson }}
+      },
+      "image": [
+        {% for k in ['image_url_1','image_url_2','image_url_3','image_url_4'] %}
+          {% if p.get(k) %}"{{ site_url }}{{ p[k] }}"{% if not loop.last %},{% endif %}{% endif %}
+        {% endfor %}
+      ],
+      "category": {{ p.category | tojson }},
+      "offers": {
+        "@type": "Offer",
+        "url": {{ canonical | tojson }},
+        "priceCurrency": "USD",
+        "price": "{{ '%.2f' | format(price_val) }}",
+        "availability": {{ avail_schema | tojson }},
+        "seller": {
+          "@type": "Organization",
+          "name": {{ site_name | tojson }}
+        }
+      }
+      {% if p.get('material') and p.material not in ('','N/A') %}
+      ,"material": {{ p.material | tojson }}
+      {% endif %}
+      {% if p.get('color') and p.color not in ('','N/A') %}
+      ,"color": {{ p.color | tojson }}
+      {% endif %}
+    },
+    {
+      "@type": "BreadcrumbList",
+      "itemListElement": [
+        {% for b in breadcrumbs %}
+        {
+          "@type": "ListItem",
+          "position": {{ loop.index }},
+          "name": {{ b.name | tojson }},
+          "item": {{ b.url | tojson }}
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    },
+    {
+      "@type": "WebPage",
+      "url": {{ canonical | tojson }},
+      "name": {{ title | tojson }},
+      "description": {{ description | tojson }},
+      "isPartOf": {"@type":"WebSite","url":{{ site_url|tojson }}},
+      "inLanguage": "en-US",
+      "dateModified": {{ today|tojson }}
+    }
+    {% if faq %}
+    ,{
+      "@type": "FAQPage",
+      "mainEntity": [
+        {% for q_text, a_text in faq %}
+        {"@type":"Question","name":{{ q_text|tojson }},"acceptedAnswer":{"@type":"Answer","text":{{ a_text|tojson }}}}{% if not loop.last %},{% endif %}
+        {% endfor %}
+      ]
+    }
+    {% endif %}
+  ]
+}
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&display=swap" rel="stylesheet">
+<link rel="preload" href="/static/css/main.css?v=3" as="style">
+<link rel="stylesheet" href="/static/css/main.css?v=3">
+<style>
+.product-page{max-width:1100px;margin:32px auto;padding:0 20px}
+.breadcrumb{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:13px;color:var(--ink3);margin-bottom:24px}
+.breadcrumb a{color:var(--accent);text-decoration:none}.breadcrumb a:hover{text-decoration:underline}
+.breadcrumb span{color:var(--ink3)}
+.product-layout{display:grid;grid-template-columns:1fr 1fr;gap:48px;align-items:start}
+@media(max-width:700px){.product-layout{grid-template-columns:1fr}}
+.product-gallery{}
+.main-img{aspect-ratio:1;background:var(--surface2);border-radius:16px;overflow:hidden;display:flex;align-items:center;justify-content:center;margin-bottom:12px}
+.main-img img{width:100%;height:100%;object-fit:contain;padding:20px}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{width:64px;height:64px;border-radius:8px;overflow:hidden;border:2px solid transparent;cursor:pointer;background:var(--surface2)}
+.thumb.active{border-color:var(--accent)}
+.thumb img{width:100%;height:100%;object-fit:contain;padding:4px}
+.product-info{}
+.product-cats{font-size:12px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+.product-cats a{color:var(--accent);text-decoration:none}.product-cats a:hover{text-decoration:underline}
+h1.product-title{font-family:var(--font-display);font-size:26px;line-height:1.3;margin-bottom:6px;color:var(--ink)}
+.product-brand{font-size:14px;color:var(--ink3);margin-bottom:16px}
+.product-price{font-size:32px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.product-price-case{font-size:14px;color:var(--ink3);margin-bottom:14px}
+.avail-badge{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:600;padding:5px 12px;border-radius:20px;margin-bottom:20px}
+.avail-badge.in-stock{background:var(--green-bg);color:var(--green)}
+.avail-badge.limited{background:#FFF7ED;color:var(--amber)}
+.avail-badge.backorder{background:var(--red-bg);color:var(--red)}
+.add-to-cart{width:100%;background:var(--accent);color:#fff;border:none;border-radius:12px;padding:16px;font-size:16px;font-weight:600;cursor:pointer;transition:.15s;margin-bottom:24px}
+.add-to-cart:hover{background:var(--accent2)}
+.product-desc{font-size:14px;color:var(--ink2);line-height:1.8;margin-bottom:20px}
+.features-list{margin:0 0 20px 18px;font-size:14px;color:var(--ink2);line-height:1.9}
+.specs-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:13px;margin-bottom:24px}
+.spec-row{background:var(--surface2);border-radius:8px;padding:9px 12px}
+.spec-label{color:var(--ink3);font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.05em;margin-bottom:2px}
+.spec-val{color:var(--ink);font-weight:500}
+.similar-section{margin-top:48px;border-top:1px solid var(--border);padding-top:32px}
+.similar-section h2{font-family:var(--font-display);font-size:22px;margin-bottom:20px}
+.similar-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:16px}
+</style>
+</head>
+<body>
+
+<header class="header" role="banner">
+  <div class="header-inner">
+    <a class="logo" href="/" aria-label="{{ site_name }} — Home">
+
+            <div class="logo-icon" aria-hidden="true">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+      </div>
+      <span class="logo-text">{{ site_name }}</span>
+    </a>
+    <div class="header-search" role="search">
+      <form action="/" method="get">
+        <label for="searchInput" class="sr-only">Search medical supplies</label>
+        <input id="searchInput" type="search" name="q"
+               placeholder="Search 298,000 medical supplies…"
+               autocomplete="off" aria-label="Search products">
+        <button type="submit" aria-label="Submit search">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+</header>
+
+<div class="product-page">
+
+  <!-- Breadcrumb -->
+  <nav class="breadcrumb" aria-label="Breadcrumb">
+    {% for b in breadcrumbs %}
+      {% if not loop.last %}
+        <a href="{{ b.url }}">{{ b.name }}</a>
+        <span aria-hidden="true">›</span>
+      {% else %}
+        <span aria-current="page">{{ b.name }}</span>
+      {% endif %}
+    {% endfor %}
+  </nav>
+
+  <div class="product-layout">
+
+    <!-- Gallery -->
+    <div class="product-gallery">
+      <div class="main-img" id="mainImgWrap">
+        <img id="mainImg"
+             src="{{ p.image_url_1 or '/api/catimg/' + (p.category|slugify) + '/0' }}"
+             alt="{{ p.product_name }}"
+             width="600" height="600"
+             onerror="this.onerror=null;this.src='/api/catimg/{{ p.category|slugify }}/0'">
+      </div>
+      <div class="thumbs" id="thumbs">
+        {% for k in ['image_url_1','image_url_2','image_url_3','image_url_4'] %}
+          {% if p.get(k) %}
+          <div class="thumb{% if loop.first %} active{% endif %}"
+               onclick="switchThumb(this,'{{ p[k] }}')"
+               role="button" aria-label="Product image {{ loop.index }}">
+            <img src="{{ p[k] }}" alt="{{ p.product_name }} image {{ loop.index }}"
+                 width="64" height="64" loading="lazy"
+                 onerror="this.closest('.thumb').style.display='none'">
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+
+    <!-- Info -->
+    <div class="product-info">
+      <div class="product-cats">
+        <a href="/c/{{ p.category | lower | replace(' ','- ') | replace('& ','-') | replace(' ','-') }}">{{ p.category }}</a>
+        {% if p.subcategory %}
+          &rsaquo;
+          <a href="/c/{{ p.category | lower | replace(' ','-') | replace('&amp;','-') }}/{{ p.subcategory | lower | replace(' ','-') | replace('&amp;','-') }}">{{ p.subcategory }}</a>
+        {% endif %}
+      </div>
+
+      <h1 class="product-title">{{ p.product_name }}</h1>
+      <p class="product-brand">by <strong>{{ p.brand }}</strong>
+        {% if p.sku %} · SKU: {{ p.sku }}{% endif %}
+      </p>
+
+      <div class="product-price">{{ p.price_each }}</div>
+      {% if p.price_case %}
+      <div class="product-price-case">Case: {{ p.price_case }}</div>
+      {% endif %}
+
+      <div class="avail-badge
+        {% if p.availability == 'In Stock' %}in-stock
+        {% elif 'Limited' in p.availability %}limited
+        {% else %}backorder{% endif %}">
+        {{ p.availability }}
+      </div>
+
+      <button class="add-to-cart" onclick="alert('Add to cart — connect your cart system here')">
+        + Add to Cart
+      </button>
+
+      {% if p.description %}
+      <p class="product-desc">{{ p.description }}</p>
+      {% endif %}
+
+      {% if features %}
+      <ul class="features-list" aria-label="Product features">
+        {% for f in features %}
+        <li>{{ f }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if specs %}
+      <div class="specs-grid" aria-label="Product specifications">
+        {% for label, val in specs %}
+        <div class="spec-row">
+          <div class="spec-label">{{ label }}</div>
+          <div class="spec-val">{{ val }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- Similar products -->
+  {% if similar %}
+  <section class="similar-section" aria-label="Similar products">
+    <h2>Similar {{ p.subcategory or p.category }} Products</h2>
+    <div class="similar-grid">
+      {% for sp in similar %}
+      <a href="{{ sp.url }}" class="product-card" style="text-decoration:none;color:inherit">
+        <div class="card-img">
+          <img src="{{ sp.image_url_1 or '/api/catimg/' + (sp.category|slugify) + '/0' }}" alt="{{ sp.product_name }}"
+               width="200" height="200" loading="lazy"
+               onerror="this.onerror=null;this.src='/api/catimg/{{ sp.category|slugify }}/0'">
+        </div>
+        <div class="card-body">
+          <div class="card-brand">{{ sp.brand }}</div>
+          <div class="card-name">{{ sp.product_name }}</div>
+          <div class="card-footer">
+            <div class="card-price">{{ sp.price_each }}</div>
+          </div>
+        </div>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  {% endif %}
+
+  {% if brand_desc %}
+  <section style="margin-top:40px;border-top:1px solid var(--border);padding-top:28px">
+    <h2 style="font-family:var(--font-display);font-size:22px;letter-spacing:-0.02em;margin-bottom:10px">About {{ p.brand }}</h2>
+    <p style="font-size:14px;color:var(--gray-500);line-height:1.8;max-width:700px;margin-bottom:14px">{{ brand_desc }}</p>
+    <a href="/brand/{{ brand_slug }}" style="font-size:13px;color:var(--cobalt);text-decoration:none;font-weight:500">
+      Browse all {{ p.brand }} products at {{ site_name }} →
+    </a>
+  </section>
+  {% endif %}
+
+  {% if faq %}
+  <section style="margin-top:40px;border-top:1px solid var(--border);padding-top:28px;max-width:700px">
+    <h2 style="font-family:var(--font-display);font-size:22px;letter-spacing:-0.02em;margin-bottom:18px">Product Information</h2>
+    {% for q_text, a_text in faq %}
+    <div style="border-bottom:1px solid var(--border);padding:12px 0">
+      <div style="font-size:14px;font-weight:600;color:var(--navy);margin-bottom:4px">{{ q_text }}</div>
+      <div style="font-size:13px;color:var(--gray-500);line-height:1.7">{{ a_text }}</div>
+    </div>
+    {% endfor %}
+  </section>
+  {% endif %}
+
+  <section style="margin-top:40px;border-top:1px solid var(--border);padding-top:24px">
+    <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+      <a href="/c/{{ p.category|lower|replace(' ','-')|replace('&amp;','')|replace('/','-')|replace('--','-') }}"
+         style="font-size:13px;color:var(--cobalt);text-decoration:none;padding:6px 14px;background:var(--cobalt-light);border-radius:6px;font-weight:500">
+        ← All {{ p.category }} Supplies
+      </a>
+      {% if p.subcategory %}
+      <a href="/c/{{ p.category|lower|replace(' ','-')|replace('&amp;','')|replace('/','-')|replace('--','-') }}/{{ p.subcategory|lower|replace(' ','-')|replace('&amp;','')|replace('/','-')|replace('--','-') }}"
+         style="font-size:13px;color:var(--cobalt);text-decoration:none;padding:6px 14px;background:var(--cobalt-light);border-radius:6px;font-weight:500">
+        ← All {{ p.subcategory }}
+      </a>
+      {% endif %}
+      <a href="/brand/{{ brand_slug }}"
+         style="font-size:13px;color:var(--cobalt);text-decoration:none;padding:6px 14px;background:var(--cobalt-light);border-radius:6px;font-weight:500">
+        ← All {{ p.brand }} Products
+      </a>
+    </div>
+  </section>
+
+</div>
+
+<style>.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}</style>
+<script>
+function switchThumb(el, url) {
+  document.querySelectorAll('.thumb').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const img = document.getElementById('mainImg');
+  img.style.display = '';
+  img.src = url;
+}
+</script>
+</body>
+</html>

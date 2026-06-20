@@ -7,3 +7,13 @@ __pycache__/
 .DS_Store
 api.env.txt
 medical_supplies.csv
+
+# Runtime SQLite db (regenerated from the CSV via csv_to_sqlite.py — exceeds
+# GitHub's 100MB file limit and isn't source content).
+medical_supplies.db
+medical_supplies.db-wal
+medical_supplies.db-shm
+
+# FUSE-mount temp/lock artifacts from the sandboxed dev environment.
+.fuse_hidden*
+.testfile_abc
