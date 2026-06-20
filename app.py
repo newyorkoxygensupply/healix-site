@@ -1590,25 +1590,64 @@ SUBCAT_PEXELS_QUERIES = {
 
 _PEXELS_CACHE: dict[str, list[str]] = {}
 
-def _fetch_pexels_photos(query: str, count: int = 40) -> list[str]:
+def _fetch_pexels_photos(query: str, count: int = 40, orientation: str = "square", size: str = "medium") -> list[str]:
     if not PEXELS_API_KEY:
         return []
-    cache_key  = hashlib.sha1(f"pexels-{query}".encode()).hexdigest()
+    cache_key  = hashlib.sha1(f"pexels-{orientation}-{size}-{query}".encode()).hexdigest()
     cache_file = IMG_CACHE / f"{cache_key}.json"
     if cache_file.exists():
         try: return json.loads(cache_file.read_text())
         except Exception: pass
     try:
-        url = f"https://api.pexels.com/v1/search?query={urllib.parse.quote(query)}&per_page={count}&orientation=square"
+        url = f"https://api.pexels.com/v1/search?query={urllib.parse.quote(query)}&per_page={count}&orientation={orientation}"
         req = urllib.request.Request(url, headers={"Authorization": PEXELS_API_KEY})
         with urllib.request.urlopen(req, timeout=10) as r:
             data = json.loads(r.read())
-        photos = [p["src"]["medium"] for p in data.get("photos",[])]
+        photos = [p["src"][size] for p in data.get("photos",[])]
         if photos: cache_file.write_text(json.dumps(photos))
         return photos
     except Exception as e:
         log.warning("Pexels API error: %s", e)
         return []
+
+_BLOG_IMG_CACHE: dict[str, list[str]] = {}
+
+@app.route("/api/blogimg/<slug>")
+def blog_image(slug):
+    """Serves a topic-relevant hero/card photo for a blog post, sourced from
+    Pexels and cached to disk (mirrors the product-photo caching pattern
+    above). Falls back to the generic OG image if a post has no image_query
+    or the Pexels lookup fails for any reason."""
+    post = BLOG_BY_SLUG.get(slug)
+    query = post.get("image_query") if post else None
+    if not query:
+        return redirect("/static/img/og-default.jpg")
+    if slug not in _BLOG_IMG_CACHE:
+        _BLOG_IMG_CACHE[slug] = _fetch_pexels_photos(query, count=5, orientation="landscape", size="landscape")
+    photos = _BLOG_IMG_CACHE.get(slug, [])
+    if not photos:
+        return redirect("/static/img/og-default.jpg")
+    photo_url  = photos[0]
+    cache_key  = hashlib.sha1(photo_url.encode()).hexdigest()
+    cache_file = IMG_CACHE / f"blogimg-{cache_key}.jpg"
+    if cache_file.exists():
+        resp = Response(cache_file.read_bytes(), content_type="image/jpeg")
+        resp.headers["Cache-Control"] = "public, max-age=2592000"
+        return resp
+    try:
+        req = urllib.request.Request(photo_url, headers={
+            "User-Agent": "Mozilla/5.0",
+            "Referer":    "https://www.pexels.com/",
+        })
+        with urllib.request.urlopen(req, timeout=10) as r:
+            img_data = r.read()
+        cache_file.write_bytes(img_data)
+        resp = Response(img_data, content_type="image/jpeg")
+        resp.headers["Cache-Control"] = "public, max-age=2592000"
+        return resp
+    except Exception as e:
+        log.debug("Blog image fetch failed: %s", e)
+        return redirect("/static/img/og-default.jpg")
 
 @app.route("/api/photo/<cat_slug>/<int:n>")
 def category_photo(cat_slug, n):
@@ -2003,7 +2042,7 @@ def blog_post(slug):
         title=f"{post['title']} | {SITE_NAME} Blog",
         description=post["meta_description"],
         canonical=f"{SITE_URL}/blog/{slug}",
-        og_image=SITE_URL + "/static/img/og-default.jpg",
+        og_image=(SITE_URL + f"/api/blogimg/{slug}") if post.get("image_query") else (SITE_URL + "/static/img/og-default.jpg"),
         post=post, breadcrumbs=breadcrumbs, related=related,
     )
 

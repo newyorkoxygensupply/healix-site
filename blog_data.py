@@ -1913,3 +1913,6 @@ BLOGS = [
 """
   },
 ]
+
+from blog_data_new import BLOGS_NEW as _BLOGS_NEW
+BLOGS.extend(_BLOGS_NEW)
