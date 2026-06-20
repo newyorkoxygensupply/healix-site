@@ -98,11 +98,19 @@ function hashCode(str) {
   return Math.abs(h);
 }
 
-// Returns a same-origin photo URL — uses Pexels if API key is set, else SVG icon
-function getProductImageUrl(category, productId) {
+// Returns a same-origin photo URL — uses Pexels if API key is set, else SVG icon.
+// Buckets by category + subcategory (not just category) so the ~266 distinct
+// subcategories each get their own targeted photo pool instead of every
+// product in a whole category sharing the same handful of recycled photos.
+function subcatSlug(subcategory) {
+  return subcategory ? slugify(subcategory) : '_';
+}
+
+function getProductImageUrl(category, productId, subcategory) {
   const slug = CAT_SLUG[category] || 'patient-care';
+  const sub  = subcatSlug(subcategory);
   const n    = hashCode(productId || '') % 8;
-  return `/api/photo/${slug}/${n}`;
+  return `/api/photo/${slug}/${sub}/${n}`;
 }
 
 function getCatImgUrl(category, productId) {
@@ -607,8 +615,9 @@ function renderProducts(products) {
     const productSlug = slugify(p.product_name);
     const productHref = `/p/${p.product_id}/${productSlug}`;
     const _slug = CAT_SLUG[p.category] || 'patient-care';
+    const _sub  = subcatSlug(p.subcategory);
     const _n    = hashCode(p.product_id || '') % 8;
-    const _pxUrl  = `/api/photo/${_slug}/${_n}`;
+    const _pxUrl  = `/api/photo/${_slug}/${_sub}/${_n}`;
     const _svgUrl = getCatImgUrl(p.category, p.product_id);
     const _imgSrc = p.image_url_1
       ? `/api/img-proxy?url=${encodeURIComponent(p.image_url_1)}`
@@ -743,13 +752,13 @@ async function openProduct(productId) {
       <!-- Gallery -->
       <div class="modal-gallery">
         <div class="modal-main-img" id="mainImgWrap">
-          <img id="mainImg" src="${getProductImageUrl(p.category, p.product_id)}" alt="${escHtml(p.product_name)}"
+          <img id="mainImg" src="${getProductImageUrl(p.category, p.product_id, p.subcategory)}" alt="${escHtml(p.product_name)}"
                onerror="this.onerror=null;this.src='/api/catimg/patient-care/0'">
           <div id="mainImgPlaceholder" style="display:none"></div>
         </div>
         <div class="modal-thumbs">
           ${[0,1,2,3].map(i => {
-            const src = getProductImageUrl(p.category, p.product_id + '_' + i);
+            const src = getProductImageUrl(p.category, p.product_id + '_' + i, p.subcategory);
             return `<div class="modal-thumb ${i===0?'active':''}" onclick="switchImg(this,'${src}')">
               <img src="${src}" alt="Product view ${i+1}" onerror="this.parentElement.style.display='none'">
             </div>`;
@@ -808,7 +817,7 @@ async function openProduct(productId) {
         ${sim.slice(0,6).map(sp => `
           <div class="product-card" onclick="openProduct('${sp.product_id}')" style="cursor:pointer">
             <div class="card-img">
-              <img src="${getProductImageUrl(sp.category, sp.product_id)}" alt="${escHtml(sp.product_name)}"
+              <img src="${getProductImageUrl(sp.category, sp.product_id, sp.subcategory)}" alt="${escHtml(sp.product_name)}"
                    onerror="this.onerror=null;this.src='/api/catimg/patient-care/0'">
               <div class="img-placeholder" style="display:none"></div>
             </div>
