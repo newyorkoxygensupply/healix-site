@@ -1212,7 +1212,7 @@ def chat():
         return jsonify({"error": "No user message"}), 400
 
     payload = json.dumps({
-        "model":       "llama-3.1-8b-instant",
+        "model":       "openai/gpt-oss-20b",
         "messages":    [{"role": "system", "content": _get_chat_system()}] + clean,
         "max_tokens":  400,
         "temperature": 0.4,
