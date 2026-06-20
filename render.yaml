@@ -1,0 +1,32 @@
+# Render Blueprint for the Next.js 16 SSR frontend (frontend/).
+#
+# This does NOT touch the existing Flask/SQLite service that already serves
+# healixmedicalsupply.com (provisioned manually, see RENDER_COMMANDS.txt) —
+# that stays the system of record for the catalog and keeps running exactly
+# as-is. This blueprint only adds a second, independent Render Web Service
+# for the new presentation layer, which talks to the Flask service over
+# HTTPS via FLASK_API_URL.
+#
+# To deploy: Render dashboard -> New -> Blueprint -> select this repo. Render
+# detects this file automatically and provisions the service below.
+services:
+  - type: web
+    name: healix-frontend
+    runtime: node
+    rootDir: frontend
+    plan: starter
+    region: oregon
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    autoDeployTrigger: commit
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      # Server-side only — used by frontend/src/lib/api.ts to call the
+      # existing Flask API. Never exposed to the browser.
+      - key: FLASK_API_URL
+        value: https://healixmedicalsupply.com
+      # Public — baked into metadata/canonical/JSON-LD/sitemap output.
+      # Update once this app is cut over to serve the apex domain directly.
+      - key: NEXT_PUBLIC_SITE_URL
+        value: https://healixmedicalsupply.com

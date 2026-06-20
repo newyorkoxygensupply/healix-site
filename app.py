@@ -252,7 +252,8 @@ CAT_SEO = {
              "for oxygen cylinders."),
             ("Do I need a prescription for a home oxygen concentrator?",
              "Yes. Oxygen concentrators are Class II medical devices that require a prescription from a licensed physician. "
-             "They are typically covered by Medicare Part B and most private insurance when medically necessary."),
+             "Healix sells at bulk B2B pricing directly to facilities and individuals; currently we don't accept Insurance, "
+             "Medicaid or Medicare, so check with your provider separately about any coverage you may be eligible for."),
         ],
     },
     "Incontinence": {
@@ -434,9 +435,10 @@ CAT_SEO = {
                      "rollator", "mobility aids", "bath safety"],
         "faq": [
             ("Does Medicare cover durable medical equipment?",
-             "Medicare Part B covers DME when prescribed by a physician and deemed medically necessary. Covered items "
-             "include wheelchairs, walkers, hospital beds, oxygen equipment, CPAP machines, and certain other devices. "
-             "Patients typically pay 20% of the Medicare-approved amount after the Part B deductible."),
+             "Medicare Part B can cover DME when prescribed by a physician and deemed medically necessary, but that "
+             "coverage is processed directly with Medicare, not through Healix. Currently we don't accept Insurance, "
+             "Medicaid or Medicare — we sell at bulk B2B pricing, and patients or facilities can pursue reimbursement "
+             "with their own provider separately."),
         ],
     },
     "Dental": {
@@ -482,9 +484,9 @@ CAT_SEO = {
              "ConvaTec (ActiveLife, Sur-Fit Natura, Esteem+), Hollister (CenterPoint Lock, New Image, Premier), "
              "Marlen, Nu-Hope Laboratories, Cymed MicroSkin, Salts Healthcare, Dansac, and Welland Medical."),
             ("Are ostomy supplies covered by insurance?",
-             "Medicare Part B covers ostomy supplies when prescribed by a physician. Most private insurance plans "
-             "also provide coverage. Typically 1 month's supply is covered. Contact your insurance provider for "
-             "specific benefit and reimbursement details."),
+             "Many insurance plans and Medicare Part B do cover ostomy supplies when prescribed by a physician, but "
+             "that coverage is arranged directly with your provider — currently we don't accept Insurance, Medicaid "
+             "or Medicare at Healix. We sell at bulk B2B pricing, and you're welcome to seek reimbursement separately."),
         ],
     },
 }
